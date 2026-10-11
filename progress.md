@@ -103,3 +103,39 @@ Mistakes/fixes: no new feature-check failures occurred in this continuation. Mul
 Limits: this is an in-memory allocation model, not hardware wear measurement or data migration. Quarantine is conservative but not persisted. There is no reactivation API; recovery and slot/register mapping need an architect-reviewed design before integration. The commit message for this continuation is `Add conservative simulated wear-leveling policy and CLI`.
 
 Usage: at 12:34 Bangkok, the provider reported 0% weekly and 0% five-hour usage with reset timestamps different from the earlier observation. This is a new measurement baseline; earlier 26% must not be subtracted across the differing windows. Final verification reported 0% weekly and 3% five-hour usage within the same windows as the continuation baseline. The displayed weekly change is 0 percentage points; unchanged rounded percentages do not mean no resources were consumed. Full-day use and other providers remain unknown.
+
+### Day 1 continuation — persistent planner journal
+
+The owner independently ran `wear_simulator.exe 1000 4 1000` and reported the expected 250 writes per slot / 3000 remaining budget. The next plan was to preserve planner counters and quarantine across restart without introducing hardware access.
+
+Acceptance criteria: exclusive writer ownership, flushed reservations before leases, conservative restart after interruption, refusal of damaged/missing state, no overwrite through initialization, poisoning after failed writes, and reproducible persistent CLI runs.
+
+Completed:
+
+- Added a versioned append-only journal with create-new initialization, native OS locking, flushed reservation/completion events, bounded CRC/sequence/semantic replay, and fail-closed load/error handling.
+- Kept unknown/dropped/forgotten leases charged and quarantined on disk; added no reactivation API. Completion replay is crate-private and checks matching pending reservations.
+- Extended the existing simulator with `--state PATH` / `--init`, configuration mismatch protection, and readable error messages; preserved the RAM-only interface and default gRPC executable.
+- Added a journal format/durability specification and an agent security rule. Runtime `state/` and `*.wearlog` files remain ignored.
+- Added `tempfile` as an explicit test dependency using its already-cached, previously transitive version; updated `Cargo.lock` offline. No new package download, system upgrade, credential change, or network RPC was needed.
+
+Verification on Windows:
+
+| Check | Result |
+| --- | --- |
+| Locked Cargo tests | Passed: 20 executed tests, including ten new persistence tests; C++ integration explicitly ignored |
+| Process interruption | A child exited without Rust destructors after a flushed reservation; restart preserved its charge/quarantine |
+| Locking | Another handle/process could not open the owned journal; closing the owner released it |
+| Recovery validation | Rejected corruption, every partial-tail size, CRC-valid invalid transitions/sequences, oversized files, and exhausted record capacity |
+| I/O failure | A failed append returned no lease, preserved the source file, and poisoned subsequent mutations |
+| Persistent CLI | Second process resumed counts; mismatched configuration and repeated initialization did not modify the source |
+| `mingw32-make check simulate-wear` | Passed: formatting, compilation, optimized build, and unchanged 1000-write RAM demo |
+| Local persistent demonstration | Created `state/demo.wearlog` with a fresh 1000-write simulation, then reopened with zero writes: 250 per slot, 3000 remaining, 34096-byte journal |
+
+Mistakes and fixes:
+
+- Initial cross-process lock test failed because CLI errors used enum Debug output rather than the readable Display message. Locking itself rejected the second writer. Changed the CLI entry point to print Display errors; reran the complete suite successfully.
+- A follow-up patch referenced a pre-rustfmt line and was rejected without publication. Reapplied the change against the formatted source.
+
+The old in-memory process could not be retroactively persisted; the local demo journal recreates its reported distribution through a new simulated run. Power-loss durability, authenticated anti-rollback, compaction, and hardware-backed wear remain unverified/unimplemented. Existing source journals are never repaired or deleted automatically. Commit message: `Persist simulated wear state with a locked write-ahead journal`.
+
+Usage baseline at 12:44 Bangkok: 1% weekly / 5% five-hour usage, with the same reported reset timestamps as the previous continuation. Final verification showed 2% weekly / 12% five-hour usage. Final reset timestamps differ from the baseline by one second; no exact interval delta or actual reset is asserted from this small timestamp difference. Full-day attribution and other providers' metrics remain unavailable. No provider limits or recurring automation were changed.

@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 
+pub mod wear_journal;
 pub mod wear_leveling;
 
 pub mod actuator {

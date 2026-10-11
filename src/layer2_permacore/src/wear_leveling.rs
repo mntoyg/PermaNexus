@@ -37,6 +37,7 @@ pub enum WearError {
     DuplicateSlot(u32),
     InvalidBudget(u32),
     UnknownSlot(u32),
+    InvalidCompletion(u32),
     NoEligibleSlot,
 }
 
@@ -49,6 +50,7 @@ impl fmt::Display for WearError {
             Self::DuplicateSlot(id) => write!(formatter, "Duplicate slot ID: {id}"),
             Self::InvalidBudget(id) => write!(formatter, "Invalid write budget for slot {id}"),
             Self::UnknownSlot(id) => write!(formatter, "Unknown slot ID: {id}"),
+            Self::InvalidCompletion(id) => write!(formatter, "No pending write for slot {id}"),
             Self::NoEligibleSlot => {
                 formatter.write_str("No healthy slot has remaining write budget")
             }
@@ -138,6 +140,24 @@ impl WearLeveler {
             .binary_search_by_key(&id, |slot| slot.id)
             .map_err(|_| WearError::UnknownSlot(id))?;
         self.slots[index].health = SlotHealth::Retired;
+        Ok(())
+    }
+
+    // Only replay of a validated durable completion record may call this method.
+    pub(crate) fn replay_completion(
+        &mut self,
+        id: u32,
+        outcome: WriteOutcome,
+    ) -> Result<(), WearError> {
+        let index = self
+            .slots
+            .binary_search_by_key(&id, |slot| slot.id)
+            .map_err(|_| WearError::UnknownSlot(id))?;
+        let slot = &mut self.slots[index];
+        if slot.health != SlotHealth::Quarantined || slot.charged_writes == 0 {
+            return Err(WearError::InvalidCompletion(id));
+        }
+        WriteLease { slot }.complete(outcome);
         Ok(())
     }
 }

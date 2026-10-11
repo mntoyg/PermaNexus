@@ -9,3 +9,5 @@
 /.aider*
 !/.aider.conf.yml
 /CLAUDE.local.md
+/state/
+*.wearlog
