@@ -1,4 +1,5 @@
 #include "register_bank.h"
+#include "hpp/spin_wait.hpp"
 
 #include <atomic>
 #include <cstdlib>
@@ -49,18 +50,47 @@ int main() {
     }
 
     std::atomic<unsigned> successes{0};
+    std::atomic<unsigned> ready{0};
+    std::atomic<bool> start{false};
     std::vector<std::thread> writers;
     for (unsigned i = 0; i < 32; ++i) {
-        writers.emplace_back([&bank, &successes, register32] {
+        writers.emplace_back([&bank, &successes, &ready, &start, register32] {
+            ready.fetch_add(1, std::memory_order_release);
+            hpp::SpinWait wait;
+            while (!start.load(std::memory_order_acquire)) { wait.pause(); }
             if (bank.compare_write(register32, 43, 42).status == RegisterStatus::ok) {
                 ++successes;
             }
         });
     }
+    hpp::SpinWait wait;
+    while (ready.load(std::memory_order_acquire) != 32) { wait.pause(); }
+    start.store(true, std::memory_order_release);
     for (auto& writer : writers) {
         writer.join();
     }
     require(successes == 1, "Compare-and-write was not atomic");
     require(bank.read(register32).value == 43, "Unexpected final value");
+    RegisterBank independent;
+    const std::array<RegisterAddress, 4> addresses{{
+        {"simulated-0", 0, 1}, {"simulated-0", 2, 2},
+        {"simulated-0", 4, 3}, {"simulated-0", 8, 4},
+    }};
+    std::atomic<bool> failed{false};
+    std::vector<std::thread> isolated_writers;
+    for (const auto& address : addresses) {
+        isolated_writers.emplace_back([&independent, &failed, address] {
+            for (std::uint64_t value = 0; value < 200; ++value) {
+                const auto result = independent.compare_write(address, value + 1, value);
+                if (result.status != RegisterStatus::ok || result.value != value ||
+                    independent.read(address).value != value + 1) {
+                    failed.store(true);
+                }
+            }
+        });
+    }
+    for (auto& writer : isolated_writers) { writer.join(); }
+    require(!failed.load(), "Concurrent independent registers interfered");
+    require(independent.read({"simulated-0", 16, 3}).value == 1, "Concurrent writes changed read-only state");
     std::cout << "Register validation and 32-writer atomicity passed\n";
 }

@@ -7,7 +7,7 @@ PermaNexus explores a polyglot architecture for extending hardware service life.
 | Directory | Language | Responsibility | Current status |
 | --- | --- | --- | --- |
 | `proto/` | Protocol Buffers | Shared versioned contracts | Register read and compare-and-write |
-| `src/layer1_actuator/` | C++ / Assembly | Hardware access and low-latency actuation | Loopback register simulator; no hardware access |
+| `src/layer1_actuator/` | C++ / Assembly | Hardware access and low-latency actuation | HPP atomic RAM simulator and benchmarks; no MMIO |
 | `src/layer2_permacore/` | Rust | Memory safety and wear-leveling | Safe gRPC client, journaled write-budget planner, and demos |
 | `src/layer3_omni_agent/` | Go | Concurrent orchestration | Reserved directory |
 | `src/layer4_telemetry_ai/` | Python | Predictive telemetry and AI | Reserved directory |
@@ -16,7 +16,7 @@ Read [AGENTS.md](AGENTS.md) before changing the project. [progress.md](progress.
 
 ## First feature: simulated register transactions
 
-The C++ server binds only to `127.0.0.1`, stores registers in memory, and permits device `simulated-0`. A mutex protects each complete compare-and-write operation. Validation covers identity, width, alignment, overflow, expected-value presence, and write permissions. Rejected writes leave state unchanged.
+The C++ server binds only to `127.0.0.1`, stores registers in memory, and permits device `simulated-0`. Each value uses its own aligned C++ atomic and one strong compare-and-exchange operation; immutable register descriptors need no shared mutex. Validation covers identity, width, alignment, overflow, expected-value presence, and write permissions. Rejected writes leave state unchanged. Runtime lock-free support is reported by the benchmark rather than assumed for every platform.
 
 | Byte offset | Width | Initial value | Access |
 | --- | --- | --- | --- |
@@ -29,6 +29,8 @@ The C++ server binds only to `127.0.0.1`, stores registers in memory, and permit
 Actuator register state resets on restart. The Rust client only accepts `http://127.0.0.1:<port>`, sets two-second RPC deadlines, and does not automatically retry writes. A timeout does not prove a write failed. TLS, caller authentication, persistent actuator values, real MMIO, and hardware-backed wear-leveling are not implemented. Loopback does not authenticate other local processes.
 
 ## Simulated wear-leveling policy
+
+The HPP layer described below accelerates local RAM primitives; it is independent of modeled storage write budgets and does not connect slots to registers.
 
 `wear_leveling::WearLeveler` is an independent, in-memory write-budget planner. It selects a healthy, non-exhausted slot with the lowest `charged_writes / write_limit` utilization, breaking ties by numeric slot ID. Exact u128 cross-products avoid floating-point rounding and u64 multiplication overflow. Selection is O(number of slots), with no allocation per reservation and at most 4096 configured slots.
 
@@ -71,6 +73,29 @@ The final command displays state without reserving any writes. Existing files ca
 CRC32, sequence checks, and semantic replay reject accidental corruption, incomplete tails, invalid transitions, and oversized files without modifying the source. CRC32 is not authentication, and a valid old copy or whole-record rollback cannot be detected without an external trusted monotonic reference. There is no compaction or quarantine reactivation yet; the bounded journal stops after 1000000 events (about 17 MB at the largest configuration). Persistence adds filesystem I/O that is not included in modeled slot wear.
 
 See [journal format and durability boundaries](src/layer2_permacore/JOURNAL_FORMAT.md). Tests cover process interruption and filesystem errors on Windows, not physical power loss or device-cache behavior. The implementation uses Rust's [file locking and sync APIs](https://doc.rust-lang.org/std/fs/struct.File.html).
+
+## Hardware Performance Programming (HPP)
+
+In this project, HPP means reusable C++17 performance primitives in `src/layer1_actuator/include/hpp/`:
+
+- `register_bits.hpp`: constexpr width/alignment checks and bounded bit replacement without invalid shifts or raw pointers.
+- `atomic_register.hpp`: unsigned 8/16/32/64-bit owned RAM values, default 64-byte alignment, sequentially consistent loads/strong CAS, and runtime lock-free reporting.
+- `spin_wait.hpp`: bounded CPU hints before scheduler yielding; uses x86 PAUSE where supported and a portable yield fallback. It is not a memory barrier or an RPC retry policy.
+
+Run the optional Release benchmark without Protobuf/gRPC dependencies:
+
+```bash
+make benchmark-hpp BENCHMARK_ITERATIONS=100000 BENCHMARK_THREADS=4
+```
+
+On Windows with the existing UCRT64 compiler:
+
+```powershell
+mingw32-make benchmark-hpp 'CMAKE_FLAGS=-G "MinGW Makefiles"' BENCHMARK_ITERATIONS=100000 BENCHMARK_THREADS=4
+.\build\hpp\hpp_benchmark.exe 100000 4
+```
+
+Output compares atomic and mutex primitives using equivalent single-thread and contended counter workloads, and measures the validated register-bank path separately. Checksums/final counts are verified. Timing is wall time per completed operation, not a percentile or gRPC latency. No speed threshold gates correctness. See [HPP design and benchmark scope](src/layer1_actuator/HPP.md).
 
 ## Prerequisites
 

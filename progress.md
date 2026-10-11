@@ -139,3 +139,33 @@ Mistakes and fixes:
 The old in-memory process could not be retroactively persisted; the local demo journal recreates its reported distribution through a new simulated run. Power-loss durability, authenticated anti-rollback, compaction, and hardware-backed wear remain unverified/unimplemented. Existing source journals are never repaired or deleted automatically. Commit message: `Persist simulated wear state with a locked write-ahead journal`.
 
 Usage baseline at 12:44 Bangkok: 1% weekly / 5% five-hour usage, with the same reported reset timestamps as the previous continuation. Final verification showed 2% weekly / 12% five-hour usage. Final reset timestamps differ from the baseline by one second; no exact interval delta or actual reset is asserted from this small timestamp difference. Full-day attribution and other providers' metrics remain unavailable. No provider limits or recurring automation were changed.
+
+### Day 1 continuation — Hardware Performance Programming
+
+The owner reported the persistent simulation resumed correctly at 500 writes per slot / 2000 remaining budget and requested more HPP (Hardware Performance Programming). Interpreted this as performance-oriented Layer 1 C++ infrastructure and reusable `.hpp` headers, retaining the simulator-only hardware boundary.
+
+Plan/acceptance criteria: safe constexpr bit operations, owned RAM atomics with reported capabilities, scheduling hints with bounded backoff, per-register CAS without a global mutex, preserved errors/validation, deliberate concurrency tests, and a correctness-checked benchmark against an equivalent mutex primitive.
+
+Completed:
+
+- Added `register_bits.hpp`, `atomic_register.hpp`, and `spin_wait.hpp`; kept sequentially consistent strong CAS, unsigned-width constraints, default 64-byte layout alignment, and no raw hardware-address APIs.
+- Replaced mutable register metadata/global mutex with immutable descriptors and separate aligned atomics. Read/compare-and-write validation and protobuf semantics are unchanged.
+- Added an interface HPP target, native atomic64 link check with optional libatomic fallback, optional bounded benchmark build, and `make benchmark-hpp` without gRPC dependencies.
+- Added compile-time bit/layout checks, all-width atomic checks, a barrier-started 32-writer test, parallel independent-register checks, benchmark smoke/invalid-argument checks, and benchmark/durability-scope documentation.
+
+Verification on Windows GCC 14.2.0:
+
+| Check | Result |
+| --- | --- |
+| Final `benchmark-hpp` CTest run | Four checks passed: register bank, HPP primitives, benchmark smoke, rejected arguments |
+| `make test` | Two actuator checks and all 20 Rust regression tests passed; wire test explicitly ignored in the ordinary Cargo run |
+| Dedicated `make test-grpc` | Passed after the backend change, including real C++/Rust validation, 32 writers, and CLI demo |
+| Bounded benchmark | Two Release samples at 100000 iterations/four threads; final atomic single 6.848 ns/op vs mutex single 14.988 ns/op; runtime atomic64/bank lock-free reports true |
+
+All sample values are retained in `src/layer1_actuator/HPP.md`; variance between samples is reported rather than hidden. Timing does not establish a whole-system speedup, energy savings, tail latency, or hardware lifetime. Benchmarks never touched `state/demo.wearlog` or hardware registers. No dependencies, compiler flags requiring native ISA features, system tuning, or credentials were added.
+
+Mistakes/fixes: no build or test failures occurred in this continuation. Code review identified that the earlier bank concurrency check launched workers without a common release barrier; added readiness/start coordination to make contention deliberate. This was a validation gap, not an observed register-data failure. Final additional independent-register tests were rebuilt and passed after the earlier full integration run; production backend logic was unchanged by that final test refinement.
+
+Documentation review also removed an accidentally duplicated empty prerequisites heading before publication. Final `git diff --check` and the English-language scan passed for all seven Markdown files.
+
+Commit message: `Add HPP primitives and benchmark the atomic actuator backend`. Usage baseline at 13:01 Bangkok: 2% weekly / 14% five-hour usage; final verification: 3% weekly / 21% five-hour usage with identical reset timestamps. The observed weekly increase is one percentage point within that interval, not a claim about full-day consumption or exclusive attribution to this chat. Other providers' metrics remain unavailable; no quota settings or automation changed.

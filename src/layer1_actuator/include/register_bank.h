@@ -2,9 +2,9 @@
 
 #include <array>
 #include <cstdint>
-#include <mutex>
 #include <optional>
 #include <string_view>
+#include "hpp/atomic_register.hpp"
 
 namespace permanexus {
 
@@ -27,22 +27,22 @@ public:
     RegisterResult read(const RegisterAddress& address);
     RegisterResult compare_write(const RegisterAddress& address, std::uint64_t value,
                                  std::optional<std::uint64_t> expected_value);
+    bool registers_are_lock_free() const noexcept;
 
 private:
-    struct Register {
+    struct RegisterSpec {
         std::uint64_t offset;
         int width;
         bool writable;
-        std::uint64_t value;
     };
 
     RegisterResult locate(const RegisterAddress& address, std::size_t& index) const;
-    static std::uint64_t maximum_value(int width);
-
-    std::mutex mutex_;
-    std::array<Register, 5> registers_{{
-        {0, 1, true, 0}, {2, 2, true, 0}, {4, 3, true, 0},
-        {8, 4, true, 0}, {16, 3, false, 1},
+    inline static constexpr std::array<RegisterSpec, 5> registers_{{
+        {0, 1, true}, {2, 2, true}, {4, 3, true}, {8, 4, true}, {16, 3, false},
+    }};
+    using RegisterValue = hpp::AtomicRegister<std::uint64_t>;
+    std::array<RegisterValue, 5> values_{{
+        RegisterValue{0}, RegisterValue{0}, RegisterValue{0}, RegisterValue{0}, RegisterValue{1},
     }};
 };
 
