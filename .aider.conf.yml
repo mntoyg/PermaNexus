@@ -3,6 +3,7 @@ read:
   - AGENTS.md
   - README.md
 file:
+  - feature.md
   - progress.md
   - handoff.md
 commit-language: English

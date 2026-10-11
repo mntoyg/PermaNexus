@@ -4,7 +4,7 @@ Applies to Codex, Claude, Cursor, Aider, and other contributors able to read rep
 
 ## Start every session
 
-1. Read `AGENTS.md`, `README.md`, `progress.md`, and `handoff.md`.
+1. Read `AGENTS.md`, `README.md`, `feature.md`, `progress.md`, and `handoff.md`.
 2. Inspect `git status --short --branch` and relevant code. Preserve unrelated contributor work.
 3. Write a concise implementation plan with acceptance criteria. Resolve routine choices within the authorized scope.
 4. Capture available provider usage metrics and consult the budget below. Never inspect credentials to obtain usage metrics.
@@ -37,6 +37,7 @@ Applies to Codex, Claude, Cursor, Aider, and other contributors able to read rep
 - Distinguish passing, ignored, and blocked checks. A dry-run is not a build. Never report a check as passed unless it ran successfully.
 - Update `progress.md` by Bangkok date with the plan, completed work, checks, environment changes, mistakes, fixes, and unresolved issues. Record substantive mistakes factually; do not invent errors or erase fixed incidents.
 - Update `handoff.md` with implementation context, reproduction commands, limits, decisions, and the next task.
+- Update `feature.md` when capabilities, limitations, or agreed plans change. Preserve stable IDs, distinguish implemented/planned/design-required/research items, and attach verification evidence to completed work.
 - Inspect `git diff --check`, stage explicit project paths, and use English commits. The owner has authorized publishing completed PermaNexus changes to `origin/main`; this does not authorize other repositories or destructive operations.
 - Report actual publication/check status and include `git add`, `git commit`, and `git push` commands in the final response when files are completed, as requested by the owner.
 

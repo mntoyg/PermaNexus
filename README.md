@@ -12,7 +12,7 @@ PermaNexus explores a polyglot architecture for extending hardware service life.
 | `src/layer3_omni_agent/` | Go | Concurrent orchestration | Reserved directory |
 | `src/layer4_telemetry_ai/` | Python | Predictive telemetry and AI | Reserved directory |
 
-Read [AGENTS.md](AGENTS.md) before changing the project. [progress.md](progress.md) records daily work, checks, and corrections; [handoff.md](handoff.md) provides context for the next contributor.
+Read [AGENTS.md](AGENTS.md) before changing the project. [feature.md](feature.md) tracks implemented features and the roadmap; [progress.md](progress.md) records daily work, checks, and corrections; [handoff.md](handoff.md) provides context for the next contributor.
 
 ## First feature: simulated register transactions
 

@@ -4,11 +4,13 @@ Last updated: 2026-10-11, Asia/Bangkok.
 
 ## Context
 
-Read `AGENTS.md`, `README.md`, and `progress.md`, then inspect Git status. Conversations with the owner use Thai; all committed Markdown, identifiers, and code comments use English.
+Read `AGENTS.md`, `README.md`, `feature.md`, and `progress.md`, then inspect Git status. Conversations with the owner use Thai; all committed Markdown, identifiers, and code comments use English.
 
-Repository: `https://github.com/mntoyg/PermaNexus`, branch `main`. Persistence reference: `5b09472598f0dda625bcfcf88fa73c0daabf840e`. Latest source reference: `bf08902c83f6372332343a5a8b201cbb94020ec8`, HPP RAM primitives and the per-register atomic backend. The latest documentation update records the owner's independent benchmark output. Use `git log -1` and `git ls-remote origin refs/heads/main` for current commit/publication state.
+Repository: `https://github.com/mntoyg/PermaNexus`, branch `main`. Persistence reference: `5b09472598f0dda625bcfcf88fa73c0daabf840e`. Latest source reference: `bf08902c83f6372332343a5a8b201cbb94020ec8`, HPP RAM primitives and the per-register atomic backend. Owner benchmark documentation reference: `08d7a2eb93e8c3f10c9357772ca3047123f7dc51`. The latest documentation addition is the feature inventory and roadmap. Use `git log -1` and `git ls-remote origin refs/heads/main` for current commit/publication state.
 
 ## Implementation
+
+- `feature.md` tracks implemented capabilities F001-F009 and roadmap items P001-P011, with evidence, limitations, and design dependencies. Keep IDs stable and update it when feature scope/status changes. README links it; AGENTS requires reading/maintaining it; Aider loads it as an editable project record. This inventory update changes documentation/configuration only.
 
 - `proto/actuator.proto`: versioned register read and atomic compare-and-write contracts. Preserve published field numbers.
 - C++: five in-memory registers on `simulated-0`; immutable descriptors, aligned per-register strong CAS, preserved validation/read-only policy, bounded messages, and loopback-only gRPC server.
@@ -70,7 +72,7 @@ This prefix is local and ignored, not part of a fresh clone. A fresh clone needs
 
 Plan at most 14% of each full weekly provider/account allowance per Bangkok day. Agents sharing a quota pool share this target. The HPP continuation started at 13:01 with 2% weekly / 14% five-hour usage and finished with 3% weekly / 21% five-hour usage, with identical reset timestamps: one observed weekly percentage point during that interval. This does not establish full-day use or exclusive chat attribution. Earlier windows and timestamp differences remain recorded in `progress.md`. Other providers' metrics are unavailable; this policy does not configure provider limits.
 
-Latest documentation session usage observations: 13:17 Bangkok, 4% weekly / 23% five-hour; 13:19 Bangkok, 4% weekly / 24% five-hour. Reported reset timestamps shifted by one second, so no exact interval usage delta or actual reset is asserted. See `progress.md` for the raw window observations.
+Latest feature-inventory session usage observations: 13:22 Bangkok, 4% weekly / 25% five-hour; closing observation 13:24 Bangkok, 4% weekly / 27% five-hour, with identical reset timestamps. Displayed weekly usage was unchanged within the interval; this does not establish full-day use or exclusive attribution. Earlier observations remain in `progress.md`.
 
 ## Next tasks
 

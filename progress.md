@@ -181,3 +181,15 @@ Atomic single throughput was approximately 1.98 times the mutex case. Atomic con
 Mistakes/fixes: the initial conversational interpretation described the mutex as about 5.6% faster. More precisely, atomic elapsed time is 5.6% higher relative to the mutex baseline (the mutex time is about 5.3% lower relative to atomic). The recorded comparison uses mutex time as the denominator: `(42.573 / 40.331 - 1) * 100`.
 
 Usage observations: baseline 13:17 Bangkok, weekly 4% (reset 1792301671), five-hour 23% (reset 1791714871); final observation 13:19 Bangkok, weekly 4% (reset 1792301670), five-hour 24% (reset 1791714870). The one-second reset timestamp difference is recorded without asserting a reset or exact interval delta. Full-day attribution and other-provider metrics remain unavailable. Commit message: `Record owner HPP benchmark results and contention variance`.
+
+### Day 1 documentation — Feature inventory and roadmap
+
+Plan/acceptance criteria: create English `feature.md` from implemented capabilities and recorded next work, distinguish delivered features from design-dependent plans, attach evidence/limits and stable IDs, connect contributor entry points, and publish the documentation update.
+
+Completed: recorded implemented items F001-F009 and roadmap items P001-P011 with scope, verification, dependencies, and acceptance criteria. Linked the inventory from README; AGENTS now requires reading and maintaining it; Aider loads it as an editable record. Updated handoff context. Go/Python remain placeholders, real hardware remains outside current implementation, and dates/owners for future delivery remain unassigned. No source, runtime journal, toolchain, credentials, provider settings, or executable behavior changed.
+
+Verification: review inventory against repository paths and existing verification records; check local Markdown links, English language, stable-ID uniqueness, and Git whitespace. Executable tests are not rerun for documentation/configuration records; earlier test evidence is identified explicitly.
+
+Mistakes/fixes: the first patch used a sentence fragment as a full-line handoff match and was rejected without changing files. Verified that no partial edits were applied, then reapplied against the actual line. No build/test failure occurred.
+
+Usage: baseline 13:22 Bangkok, 4% weekly / 25% five-hour; closing observation 13:24 Bangkok, 4% weekly / 27% five-hour. Both observations reported weekly reset 1792301671 and five-hour reset 1791714871. Displayed weekly usage was unchanged in this interval; full-day consumption, finer-grained usage, and exclusive chat attribution cannot be inferred. Other providers' metrics remain unavailable. Commit message: `Document implemented features and the project roadmap`.
