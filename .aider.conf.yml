@@ -1,0 +1,8 @@
+# Load shared instructions without changing model, credentials, or permissions.
+read:
+  - AGENTS.md
+  - README.md
+file:
+  - progress.md
+  - handoff.md
+commit-language: English
