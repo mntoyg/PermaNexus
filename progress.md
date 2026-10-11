@@ -169,3 +169,15 @@ Mistakes/fixes: no build or test failures occurred in this continuation. Code re
 Documentation review also removed an accidentally duplicated empty prerequisites heading before publication. Final `git diff --check` and the English-language scan passed for all seven Markdown files.
 
 Commit message: `Add HPP primitives and benchmark the atomic actuator backend`. Usage baseline at 13:01 Bangkok: 2% weekly / 14% five-hour usage; final verification: 3% weekly / 21% five-hour usage with identical reset timestamps. The observed weekly increase is one percentage point within that interval, not a claim about full-day consumption or exclusive attribution to this chat. Other providers' metrics remain unavailable; no quota settings or automation changed.
+
+### Day 1 observation — Owner HPP benchmark
+
+Plan/acceptance criteria: preserve the owner's supplied output with its provenance, check timing ratios and checksum consistency, update the handoff, and publish a documentation-only change. No source tuning is justified by one timing sample.
+
+The owner ran `.\build\hpp\hpp_benchmark.exe 100000 4` and reported atomic64/bank lock-free status true and 64-byte alignment. All five timings are preserved in `src/layer1_actuator/HPP.md`. Atomic/mutex single checksums both equal 5999950000; both contended counters equal 100000; validated bank checksum equals 4999950000. These observations are consistent with the benchmark's expected results, not a new agent-executed test run.
+
+Atomic single throughput was approximately 1.98 times the mutex case. Atomic contended time per operation was approximately 5.6% higher than the mutex case. Retained the existing backend and documented that lock-free status does not guarantee a timing win. No hardware, runtime journal, dependencies, environment settings, or provider limits changed. Existing executable checks were not rerun for this documentation-only update; verification consists of diff review, whitespace checking, and English-language checking.
+
+Mistakes/fixes: the initial conversational interpretation described the mutex as about 5.6% faster. More precisely, atomic elapsed time is 5.6% higher relative to the mutex baseline (the mutex time is about 5.3% lower relative to atomic). The recorded comparison uses mutex time as the denominator: `(42.573 / 40.331 - 1) * 100`.
+
+Usage observations: baseline 13:17 Bangkok, weekly 4% (reset 1792301671), five-hour 23% (reset 1791714871); final observation 13:19 Bangkok, weekly 4% (reset 1792301670), five-hour 24% (reset 1791714870). The one-second reset timestamp difference is recorded without asserting a reset or exact interval delta. Full-day attribution and other-provider metrics remain unavailable. Commit message: `Record owner HPP benchmark results and contention variance`.

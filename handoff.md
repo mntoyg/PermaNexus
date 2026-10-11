@@ -6,7 +6,7 @@ Last updated: 2026-10-11, Asia/Bangkok.
 
 Read `AGENTS.md`, `README.md`, and `progress.md`, then inspect Git status. Conversations with the owner use Thai; all committed Markdown, identifiers, and code comments use English.
 
-Repository: `https://github.com/mntoyg/PermaNexus`, branch `main`. Persistence reference: `5b09472598f0dda625bcfcf88fa73c0daabf840e`. The latest addition is HPP RAM primitives and the per-register atomic backend, committed as `Add HPP primitives and benchmark the atomic actuator backend`. Use `git log -1` and `git ls-remote origin refs/heads/main` for current commit/publication state.
+Repository: `https://github.com/mntoyg/PermaNexus`, branch `main`. Persistence reference: `5b09472598f0dda625bcfcf88fa73c0daabf840e`. Latest source reference: `bf08902c83f6372332343a5a8b201cbb94020ec8`, HPP RAM primitives and the per-register atomic backend. The latest documentation update records the owner's independent benchmark output. Use `git log -1` and `git ls-remote origin refs/heads/main` for current commit/publication state.
 
 ## Implementation
 
@@ -24,7 +24,7 @@ Repository: `https://github.com/mntoyg/PermaNexus`, branch `main`. Persistence r
 
 Follow platform commands in `README.md`. Required checks: `make check`, `make test`, and `make test-grpc` (`mingw32-make` on Windows). Integration testing starts an ephemeral C++ server and checks validation, all widths, 32 concurrent writers, stale writes, and the Rust demo. Backend-only success does not prove interoperability.
 
-Latest HPP checks passed on Windows: four CTest checks in the gRPC-free benchmark build, 20 Rust regression tests, and the dedicated real C++/Rust integration test after the atomic backend change. A final benchmark/test rebuild also covered parallel independent registers and lock-free bank reporting. Both sample sets and their scope are recorded in `HPP.md`. ARM/MSVC/libatomic fallback, Linux/macOS execution, and physical power-loss behavior remain unverified.
+Latest HPP checks passed on Windows: four CTest checks in the gRPC-free benchmark build, 20 Rust regression tests, and the dedicated real C++/Rust integration test after the atomic backend change. A final benchmark/test rebuild also covered parallel independent registers and lock-free bank reporting. Two agent-run samples and one owner-reported sample are recorded in `HPP.md`. The owner reported matching checksums, atomic single at 6.776 ns/op versus mutex single at 13.391 ns/op, and atomic contended at 42.573 ns/op versus mutex contended at 40.331 ns/op. Keep the backend unchanged: one run does not justify tuning, and lock-free does not guarantee higher contended throughput. This documentation-only update did not rerun executable tests or mutate the journal. ARM/MSVC/libatomic fallback, Linux/macOS execution, and physical power-loss behavior remain unverified.
 
 The owner independently resumed `state/demo.wearlog` and reported 500 writes per slot / 2000 remaining budget. This HPP continuation did not run or mutate that journal. To continue the local simulation when desired:
 
@@ -69,6 +69,8 @@ This prefix is local and ignored, not part of a fresh clone. A fresh clone needs
 ## Budget
 
 Plan at most 14% of each full weekly provider/account allowance per Bangkok day. Agents sharing a quota pool share this target. The HPP continuation started at 13:01 with 2% weekly / 14% five-hour usage and finished with 3% weekly / 21% five-hour usage, with identical reset timestamps: one observed weekly percentage point during that interval. This does not establish full-day use or exclusive chat attribution. Earlier windows and timestamp differences remain recorded in `progress.md`. Other providers' metrics are unavailable; this policy does not configure provider limits.
+
+Latest documentation session usage observations: 13:17 Bangkok, 4% weekly / 23% five-hour; 13:19 Bangkok, 4% weekly / 24% five-hour. Reported reset timestamps shifted by one second, so no exact interval usage delta or actual reset is asserted. See `progress.md` for the raw window observations.
 
 ## Next tasks
 

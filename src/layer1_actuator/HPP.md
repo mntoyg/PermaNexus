@@ -28,13 +28,17 @@ Arguments: `hpp_benchmark [iterations [threads]]`. Defaults: 1000000 iterations,
 
 GCC 14.2.0 / Windows x86_64 Release samples on 2026-10-11, 100000 iterations, four contending threads, default 64-byte alignment; atomic64 and all bank values reported lock-free:
 
-| Case | First sample, ns/op | Final sample, ns/op |
-| --- | ---: | ---: |
-| Atomic single | 5.564 | 6.848 |
-| Mutex single | 15.590 | 14.988 |
-| Atomic contended | 46.692 | 56.659 |
-| Mutex contended | 50.788 | 61.504 |
-| Validated bank single | 12.284 | 19.223 |
+| Case | First sample, ns/op | Final sample, ns/op | Owner-reported sample, ns/op |
+| --- | ---: | ---: | ---: |
+| Atomic single | 5.564 | 6.848 | 6.776 |
+| Mutex single | 15.590 | 14.988 | 13.391 |
+| Atomic contended | 46.692 | 56.659 | 42.573 |
+| Mutex contended | 50.788 | 61.504 | 40.331 |
+| Validated bank single | 12.284 | 19.223 | 18.848 |
+
+The owner reported the third sample from `.\build\hpp\hpp_benchmark.exe 100000 4` on the same date. Its metadata reported `atomic64_lock_free=true`, `alignment_bytes=64`, and `bank_lock_free=true`. Single-thread checksums matched at 5999950000; both contended counters were 100000; the validated bank checksum was 4999950000. This is supplied execution output, not an additional agent-run measurement.
+
+In that sample, atomic single-thread throughput was approximately 1.98 times the mutex case, while atomic contended elapsed time per operation was approximately 5.6% higher than the mutex case. A lock-free report does not guarantee better throughput under contention. Preserve the current backend and gather representative repeated measurements before changing deployment defaults; this single sample does not establish the cause of the timing difference.
 
 These observations demonstrate workload variance, not a portable performance guarantee or whole-system speedup. ARM, MSVC, alternative cache-line sizes, and the libatomic fallback have not been executed in this session.
 
