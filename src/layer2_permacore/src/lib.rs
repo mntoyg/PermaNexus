@@ -1,5 +1,7 @@
 #![forbid(unsafe_code)]
 
+pub mod wear_leveling;
+
 pub mod actuator {
     tonic::include_proto!("permanexus.actuator.v1");
 }

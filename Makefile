@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help all build configure-actuator proto build-actuator build-permacore check test test-grpc
+.PHONY: help all build configure-actuator proto build-actuator build-permacore check test test-grpc simulate-wear
 
 CMAKE ?= cmake
 CARGO ?= cargo
@@ -7,6 +7,7 @@ CTEST ?= ctest
 BUILD_DIR ?= build
 CMAKE_CONFIG ?= Release
 CMAKE_FLAGS ?=
+SIMULATION_ARGS ?= 1000 4 1000
 
 help:
 	@echo "PermaNexus Day 1 targets:"
@@ -17,6 +18,7 @@ help:
 	@echo "  check             Check Rust formatting and compilation"
 	@echo "  test              Test C++ register safety and Rust endpoint policy"
 	@echo "  test-grpc         Test the C++ server with the Rust client and demo"
+	@echo "  simulate-wear     Run the in-memory Rust write-budget simulation"
 
 all: build
 
@@ -44,3 +46,6 @@ test: build-actuator
 
 test-grpc: build
 	$(CMAKE) -E env "PERMANEXUS_ACTUATOR_PATH_FILE=$(abspath $(BUILD_DIR)/actuator)/server_path-$(CMAKE_CONFIG).txt" $(CARGO) test --locked --manifest-path src/layer2_permacore/Cargo.toml --test grpc_contract -- --ignored
+
+simulate-wear:
+	$(CARGO) run --locked --release --manifest-path src/layer2_permacore/Cargo.toml --bin wear_simulator -- $(SIMULATION_ARGS)

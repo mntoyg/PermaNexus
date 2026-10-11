@@ -8,7 +8,7 @@ PermaNexus explores a polyglot architecture for extending hardware service life.
 | --- | --- | --- | --- |
 | `proto/` | Protocol Buffers | Shared versioned contracts | Register read and compare-and-write |
 | `src/layer1_actuator/` | C++ / Assembly | Hardware access and low-latency actuation | Loopback register simulator; no hardware access |
-| `src/layer2_permacore/` | Rust | Memory safety and wear-leveling | Safe gRPC client and runnable demo |
+| `src/layer2_permacore/` | Rust | Memory safety and wear-leveling | Safe gRPC client, write-budget planner, and demos |
 | `src/layer3_omni_agent/` | Go | Concurrent orchestration | Reserved directory |
 | `src/layer4_telemetry_ai/` | Python | Predictive telemetry and AI | Reserved directory |
 
@@ -26,7 +26,33 @@ The C++ server binds only to `127.0.0.1`, stores registers in memory, and permit
 | 8 | 64 bits | 0 | Read / compare-and-write |
 | 16 | 32 bits | 1 | Read only |
 
-State resets on restart. The Rust client only accepts `http://127.0.0.1:<port>`, sets two-second RPC deadlines, and does not automatically retry writes. A timeout does not prove a write failed. TLS, caller authentication, persistence, real MMIO, and wear-leveling are not implemented. Loopback does not authenticate other local processes.
+State resets on restart. The Rust client only accepts `http://127.0.0.1:<port>`, sets two-second RPC deadlines, and does not automatically retry writes. A timeout does not prove a write failed. TLS, caller authentication, persistence, real MMIO, and hardware-backed wear-leveling are not implemented. Loopback does not authenticate other local processes.
+
+## Simulated wear-leveling policy
+
+`wear_leveling::WearLeveler` is an independent, in-memory write-budget planner. It selects a healthy, non-exhausted slot with the lowest `charged_writes / write_limit` utilization, breaking ties by numeric slot ID. Exact u128 cross-products avoid floating-point rounding and u64 multiplication overflow. Selection is O(number of slots), with no allocation per reservation and at most 4096 configured slots.
+
+Each reservation charges one write immediately and quarantines the selected slot. An exclusive Rust borrow allows one outstanding lease per planner; completing the lease consumes it so it cannot be replayed. Immutable snapshots do not allow callers to modify internal counters.
+
+| Completion | Accounting | Slot eligibility |
+| --- | --- | --- |
+| `Committed` | Keep the charged write | Healthy, eligible while budget remains |
+| `NotWritten` | Refund the reserved write | Healthy; requires authoritative proof that no write occurred |
+| `Unknown` | Keep the charged write | Quarantined |
+| Dropped or forgotten lease | Keep the charged write | Quarantined |
+| Explicit retirement | Preserve existing charges | Permanently excluded from this planner |
+
+Never classify a timeout or uncertain transport failure as `NotWritten`. Quarantined slots have no reactivation API in this version. The planner does not execute writes, retry operations, move data, or map slots to actuator registers. State and quarantine are not persisted across process restart. Counts model configured write attempts; they are not measured endurance, physical wear, or evidence of lifetime improvement.
+
+Run a self-contained simulation without starting the actuator:
+
+```bash
+make simulate-wear SIMULATION_ARGS="1000 4 1000"
+# Arguments: requested writes, slot count, write limit per slot.
+cargo run --locked --release --manifest-path src/layer2_permacore/Cargo.toml --bin wear_simulator -- 1000 4 1000
+```
+
+On Windows, use `mingw32-make simulate-wear 'SIMULATION_ARGS=1000 4 1000'` with the same PATH/PROTOC setup as below. The CLI allows up to 100000 requested writes, 1..256 slots, and positive u64 limits. Exhaustion stops the simulation and reports the committed count without exceeding any slot limit. The original gRPC demo remains Cargo's default executable.
 
 ## Prerequisites
 
@@ -58,7 +84,7 @@ mingw32-make test 'CMAKE_FLAGS=-G "MinGW Makefiles" -DCMAKE_PREFIX_PATH=C:/msys6
 mingw32-make test-grpc 'CMAKE_FLAGS=-G "MinGW Makefiles" -DCMAKE_PREFIX_PATH=C:/msys64/ucrt64'
 ```
 
-`test` checks the C++ backend and Rust endpoint policy. `test-grpc` starts the C++ server on an ephemeral loopback port and checks the Rust client, canonical errors, all widths, 32 concurrent writers, rejected stale writes, and the CLI demo. Ordinary `cargo test` explicitly ignores this integration test because it needs a C++ executable.
+`test` checks the C++ backend, Rust endpoint policy, simulated wear-leveling invariants, and simulation CLI. `test-grpc` starts the C++ server on an ephemeral loopback port and checks the Rust client, canonical errors, all widths, 32 concurrent writers, rejected stale writes, and the CLI demo. Ordinary `cargo test` explicitly ignores this integration test because it needs a C++ executable.
 
 To test the C++ backend without gRPC installed, use a separate build directory:
 

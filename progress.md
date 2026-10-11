@@ -75,4 +75,31 @@ Target: at most 14% of each full weekly provider/account allowance per Bangkok d
 ### Remaining work
 
 - Obtain the owner's project license decision.
-- Architect review before real hardware access, identity/TLS, or wear-leveling implementation.
+- Architect review before real hardware access, identity/TLS, or hardware-backed wear-leveling implementation.
+
+### Day 1 continuation — simulated wear-leveling
+
+Plan: implement a Rust-only mock policy with explicit budget and uncertainty invariants, a runnable simulation, focused tests, and updated records. Acceptance criteria: deterministic selection by normalized budget use, no over-budget writes, no selection of quarantined/retired slots, no reservation replay, and safe accounting for ambiguous outcomes.
+
+Completed:
+
+- Added `wear_leveling.rs` with validated configuration, immutable snapshots, exact u128 utilization comparisons, deterministic ID tie-breaking, and bounded slot count.
+- Added an exclusive, consumed write lease. Reservation charges/quarantines immediately; successful completion retains the charge, proven non-writes refund it, and uncertain/dropped/forgotten leases remain quarantined. Explicit retirement preserves accounting.
+- Added a bounded, standalone `wear_simulator` CLI and `make simulate-wear`; no RPC/hardware integration or new dependencies were added.
+- Kept `permanexus-permacore` as Cargo's `default-run` to preserve the original demo after adding a second binary.
+- Added seven policy tests and two CLI tests. Tests cover balanced allocation/exhaustion, mixed capacities, near-u64-max arithmetic, refunds, quarantine, retirement, configuration failures, and rejected CLI workloads.
+
+Verification on Windows:
+
+| Check | Result |
+| --- | --- |
+| Locked Cargo tests | Passed: seven policy tests, two CLI tests, and the existing endpoint-policy test |
+| `mingw32-make check` | Passed: Rust formatting and compilation |
+| `mingw32-make simulate-wear SIMULATION_ARGS="1000 4 1000"` | Passed: 1000 committed simulated writes, 250 per slot, 3000 remaining budget |
+| C++/Rust integration | Intentionally ignored by ordinary Cargo tests; previously passed for the register feature, not rerun because transport/actuator code is unchanged |
+
+Mistakes/fixes: no new feature-check failures occurred in this continuation. Multi-binary default-run compatibility was handled before publication; it was not an observed failure. Environment: reused the verified isolated native protoc/runtime prefix and existing Cargo dependencies; no package installation, credential change, or system upgrade occurred.
+
+Limits: this is an in-memory allocation model, not hardware wear measurement or data migration. Quarantine is conservative but not persisted. There is no reactivation API; recovery and slot/register mapping need an architect-reviewed design before integration. The commit message for this continuation is `Add conservative simulated wear-leveling policy and CLI`.
+
+Usage: at 12:34 Bangkok, the provider reported 0% weekly and 0% five-hour usage with reset timestamps different from the earlier observation. This is a new measurement baseline; earlier 26% must not be subtracted across the differing windows. Final verification reported 0% weekly and 3% five-hour usage within the same windows as the continuation baseline. The displayed weekly change is 0 percentage points; unchanged rounded percentages do not mean no resources were consumed. Full-day use and other providers remain unknown.
