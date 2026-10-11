@@ -213,3 +213,13 @@ Mistakes/fixes: no build or test failure occurred. Documentation review moved th
 Usage: baseline 13:30 Bangkok, weekly 4% (reset 1792301670), five-hour 28% (reset 1791714870); closing observation 13:33 Bangkok, weekly 5% (reset 1792301671), five-hour 30% (reset 1791714871). The one-second timestamp difference is recorded without asserting a reset or exact interval delta. Earlier daily use/shared-account attribution and other-provider metrics remain incomplete. Evidence does not establish reaching 14% daily usage; no quota-triggered halt is claimed.
 
 Tomorrow's target: architect review of component/sensor policies, state transitions, instance/revision lifecycle, direct register-write interaction, and definitive/unknown completion evidence before implementing simulated new handlers or planner integration. Commit message: `Add telemetry and targeted micro-state protocol contracts`.
+
+### Day 1 requested test rerun
+
+Plan/acceptance criteria: rerun checks, C++/Rust regression tests, real gRPC integration, and the existing HPP CTest suite; save actual output and report passed versus ignored checks.
+
+Verified source: `fa1be05436e7a67dd84cb72283654ccf993d3673`. Ran `mingw32-make check test test-grpc` with the existing isolated dependency setup, followed by `ctest --test-dir build/hpp -C Release --output-on-failure`. Both commands exited successfully: Rust formatting/compilation passed, actuator CTest passed 2/2, Rust passed 22/22, dedicated gRPC integration passed 1/1, and HPP CTest passed 4/4 including benchmark smoke/rejected arguments. Ordinary Cargo skipped integration by design; the separate run executed and passed it. HPP reused its existing build; no fresh performance sample is claimed.
+
+Saved raw output in ignored `build/test-results/2026-10-11-1337-tests.log`. Tests used their isolated fixtures and an ephemeral loopback server; no hardware or `state/demo.wearlog` was touched. No source/dependency/environment changes or test failures occurred. Updated this record and handoff only; tomorrow's architect review remains the next task.
+
+Usage: 13:37 Bangkok baseline, 5% weekly / 32% five-hour (resets 1792301671 / 1791714871); 13:38 closing observation, 5% weekly / 33% five-hour (resets 1792301670 / 1791714870). Timestamp variation is recorded without asserting a reset or exact interval delta. Full-day/shared-account attribution and other-provider metrics remain unavailable; no evidence establishes the daily 14% halt threshold. Commit message: `Record requested regression and integration test results`.

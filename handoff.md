@@ -24,6 +24,8 @@ Repository: `https://github.com/mntoyg/PermaNexus`, branch `main`. Persistence r
 
 ## Verification
 
+Owner-requested rerun at 13:37 Bangkok on source `fa1be05436e7a67dd84cb72283654ccf993d3673`: Rust formatting/check passed; actuator CTest 2/2, Rust 22/22, dedicated gRPC integration 1/1, and existing HPP CTest 4/4 passed. Ordinary Cargo ignored integration by design before the separate successful execution. HPP reused its existing build, including benchmark smoke/invalid-argument checks; no new timing sample is claimed. Raw output is local/ignored at `build/test-results/2026-10-11-1337-tests.log`. No source or runtime journal changed.
+
 Latest protocol checks: regenerated/compiled C++ and Rust bindings, Rust formatting/check, two CTest backend checks, all 22 Rust tests, and the dedicated real C++/Rust integration test passed. New wire tests preserve zero-versus-absence, unknown enum values for later validation, and full uint64 revision width. Integration verifies new endpoints return `UNIMPLEMENTED` and all five registers remain unchanged; existing RPC validation/concurrency and the demo still pass. Required validation in new message comments is a future backend contract, not enforcement by protobuf decoding.
 
 Follow platform commands in `README.md`. Required checks: `make check`, `make test`, and `make test-grpc` (`mingw32-make` on Windows). Integration testing starts an ephemeral C++ server and checks validation, all widths, 32 concurrent writers, stale writes, and the Rust demo. Backend-only success does not prove interoperability.
@@ -74,7 +76,7 @@ This prefix is local and ignored, not part of a fresh clone. A fresh clone needs
 
 The owner now requires a daily workflow limit of 14% of each full weekly allowance: halt feature work when observed daily consumption or a supported conservative estimate reaches that threshold, then report completed work and tomorrow's tasks. Shared-account agents share the allowance. This does not configure provider limits. Earlier window changes and unavailable metrics prevent an exact full-day total; preserve that uncertainty and never invent a quota-triggered halt.
 
-Latest protocol-session observations: 13:30 Bangkok, 4% weekly / 28% five-hour; closing observation 13:33 Bangkok, 5% weekly / 30% five-hour. Reset timestamps differ by one second, so no exact interval usage delta or actual reset is asserted. Available evidence does not establish that the daily 14% threshold was reached. Other-provider metrics and complete daily attribution remain unavailable; earlier observations are retained in `progress.md`.
+Latest test-session observations: 13:37 Bangkok, 5% weekly / 32% five-hour; closing observation 13:38 Bangkok, 5% weekly / 33% five-hour. Reset timestamps differ by one second, so no exact interval usage delta or actual reset is asserted. Available evidence does not establish that the daily 14% threshold was reached. Other-provider metrics and complete daily attribution remain unavailable; earlier observations are retained in `progress.md`.
 
 ## Next tasks
 
