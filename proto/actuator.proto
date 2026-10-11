@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package permanexus.actuator.v1;
+
+// PermaCore is the client; the hardware actuator implements this service.
+// Calls use configured device IDs and register offsets, never raw addresses.
+// The server must enforce device access policy and validate alignment, width,
+// register bounds, and values before touching hardware.
+service HardwareActuator {
+  rpc ReadRegister(ReadRegisterRequest) returns (ReadRegisterResponse);
+  rpc WriteRegister(WriteRegisterRequest) returns (WriteRegisterResponse);
+}
+
+enum RegisterWidth {
+  REGISTER_WIDTH_UNSPECIFIED = 0;
+  REGISTER_WIDTH_8_BITS = 1;
+  REGISTER_WIDTH_16_BITS = 2;
+  REGISTER_WIDTH_32_BITS = 3;
+  REGISTER_WIDTH_64_BITS = 4;
+}
+
+message RegisterAddress {
+  // Nonempty identifier resolved through the server's configured allowlist.
+  string device_id = 1;
+  // Byte offset within the configured register region.
+  uint64 offset_bytes = 2;
+  // UNSPECIFIED must be rejected with INVALID_ARGUMENT.
+  RegisterWidth width = 3;
+}
+
+message ReadRegisterRequest {
+  RegisterAddress address = 1;
+}
+
+message ReadRegisterResponse {
+  // Logical unsigned value, zero-extended to 64 bits.
+  fixed64 value = 1;
+}
+
+message WriteRegisterRequest {
+  RegisterAddress address = 1;
+  // All bits above the selected register width must be zero.
+  fixed64 value = 2;
+  // Required precondition for an atomic compare-and-write operation.
+  // Absence is INVALID_ARGUMENT; mismatch is ABORTED without a write.
+  optional fixed64 expected_value = 3;
+}
+
+message WriteRegisterResponse {
+  // Previous register value returned after a successful compare-and-write.
+  fixed64 previous_value = 1;
+}
+
+// Server errors use canonical gRPC status codes:
+// INVALID_ARGUMENT: missing address, invalid width, alignment, or value.
+// NOT_FOUND: unknown device ID or register offset.
+// PERMISSION_DENIED: access is not allowed by device policy.
+// UNIMPLEMENTED: safe atomic compare-and-write is unavailable for this register.
+// ABORTED: the expected value did not match; no write occurred.
+// UNAVAILABLE: hardware cannot currently be accessed.
+// Clients must set deadlines. A timeout does not prove that a write failed;
+// writes must not be retried automatically. Non-readable and side-effectful
+// registers must reject compare-and-write with UNIMPLEMENTED.
