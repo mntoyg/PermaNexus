@@ -41,12 +41,12 @@ Applies to Codex, Claude, Cursor, Aider, and other contributors able to read rep
 - Inspect `git diff --check`, stage explicit project paths, and use English commits. The owner has authorized publishing completed PermaNexus changes to `origin/main`; this does not authorize other repositories or destructive operations.
 - Report actual publication/check status and include `git add`, `git commit`, and `git push` commands in the final response when files are completed, as requested by the owner.
 
-## Daily usage target: 14% of a weekly allowance
+## Daily usage limit: 14% of a weekly allowance
 
-- Use Asia/Bangkok calendar days. Plan to consume at most 14% of the full weekly allowance per day, preserving 2% across seven days. This is a soft workflow policy, not an enforced provider setting or recurring automation.
+- Use Asia/Bangkok calendar days. The owner requires a workflow limit of 14% of the full weekly allowance per day, preserving 2% across seven days. This does not configure provider settings or recurring automation.
 - Account separately for each provider/account quota pool. Agents sharing an account share its daily allowance; do not multiply 14% by agent count. Aider usage belongs to its configured model provider, and editor subscriptions may use different metrics.
 - When weekly `usedPercent` is available, record the opening and final observations. A 14 percentage-point increase equals 14% of the full weekly allowance, not 14% of what remains. Respect remaining weekly capacity and shorter-window limits as well.
 - A mid-day baseline cannot establish earlier daily consumption. Record quota-window resets separately; never subtract across a reset.
 - Use provider UI/API metrics only when available. Never invent percentages, treat unavailable metrics as zero, or claim this file configures third-party quotas.
-- Batch related reads and avoid redundant tests, polling, and explanations. Near the target or an actual limit, finish safety cleanup, preserve work, write a handoff, and defer optional work. Direct owner instructions may override this planning target.
+- Batch related reads and avoid redundant tests, polling, and explanations. When observed daily consumption or a supported conservative estimate reaches 14 weekly percentage points, stop feature work, preserve work safely, and immediately report today's completed work and tomorrow's tasks. Record unknown earlier usage and reset boundaries; do not invent an exact daily total or claim a halt threshold was reached without evidence. Near the limit, defer optional work and reserve room for verification/publication/handoff.
 - Record baseline, final observation, scope, and unavailable provider metrics in `progress.md`. Check at session start/end when supported; do not create an unsolicited recurring monitor.

@@ -6,13 +6,13 @@ Last updated: 2026-10-11, Asia/Bangkok.
 
 Read `AGENTS.md`, `README.md`, `feature.md`, and `progress.md`, then inspect Git status. Conversations with the owner use Thai; all committed Markdown, identifiers, and code comments use English.
 
-Repository: `https://github.com/mntoyg/PermaNexus`, branch `main`. Persistence reference: `5b09472598f0dda625bcfcf88fa73c0daabf840e`. Latest source reference: `bf08902c83f6372332343a5a8b201cbb94020ec8`, HPP RAM primitives and the per-register atomic backend. Owner benchmark documentation reference: `08d7a2eb93e8c3f10c9357772ca3047123f7dc51`. The latest documentation addition is the feature inventory and roadmap. Use `git log -1` and `git ls-remote origin refs/heads/main` for current commit/publication state.
+Repository: `https://github.com/mntoyg/PermaNexus`, branch `main`. Persistence reference: `5b09472598f0dda625bcfcf88fa73c0daabf840e`; atomic backend reference: `bf08902c83f6372332343a5a8b201cbb94020ec8`; feature-inventory reference: `d2dc951c28cf39b3d93ec01f195056a701fd8661`. The latest addition extends the protocol with telemetry and targeted Micro-State contract scaffolding plus verification. Use `git log -1` and `git ls-remote origin refs/heads/main` for current commit/publication state.
 
 ## Implementation
 
-- `feature.md` tracks implemented capabilities F001-F009 and roadmap items P001-P011, with evidence, limitations, and design dependencies. Keep IDs stable and update it when feature scope/status changes. README links it; AGENTS requires reading/maintaining it; Aider loads it as an editable project record. This inventory update changes documentation/configuration only.
+- `feature.md` tracks implemented capabilities F001-F010 and roadmap items P001-P011, with evidence, limitations, and design dependencies. F010 is protocol scaffolding, not implemented sensor/control endpoints. Keep IDs stable and update it when feature scope/status changes. README links it; AGENTS requires reading/maintaining it; Aider loads it as an editable project record.
 
-- `proto/actuator.proto`: versioned register read and atomic compare-and-write contracts. Preserve published field numbers.
+- `proto/actuator.proto`: existing register contracts plus additive `ReadTelemetry`/`ApplyCommand`, `TelemetryData`, and `ActuatorCommand`. New endpoints use typed units, logical component targets, and required instance/state/revision preconditions. The generated C++ service defaults return `UNIMPLEMENTED`; no sensors/control handlers are connected. Read `proto/README.md` for validation semantics and architect review gates. Preserve published field numbers.
 - C++: five in-memory registers on `simulated-0`; immutable descriptors, aligned per-register strong CAS, preserved validation/read-only policy, bounded messages, and loopback-only gRPC server.
 - HPP: three C++17 `.hpp` headers for bit validation, owned RAM atomics, and spin hints; optional benchmark and CMake atomic-link compatibility probe. Read `src/layer1_actuator/HPP.md` before interpreting timings or adding hardware-oriented primitives.
 - Rust: generated contracts, safe client wrapper with deadlines and no write retries, plus an increment-and-verify demo.
@@ -23,6 +23,8 @@ Repository: `https://github.com/mntoyg/PermaNexus`, branch `main`. Persistence r
 - `CLAUDE.md` imports the shared rules; Aider configuration loads shared rules and editable daily records. Cursor uses root `AGENTS.md`. These are guidance/context files, not hard enforcement or a runtime sandbox.
 
 ## Verification
+
+Latest protocol checks: regenerated/compiled C++ and Rust bindings, Rust formatting/check, two CTest backend checks, all 22 Rust tests, and the dedicated real C++/Rust integration test passed. New wire tests preserve zero-versus-absence, unknown enum values for later validation, and full uint64 revision width. Integration verifies new endpoints return `UNIMPLEMENTED` and all five registers remain unchanged; existing RPC validation/concurrency and the demo still pass. Required validation in new message comments is a future backend contract, not enforcement by protobuf decoding.
 
 Follow platform commands in `README.md`. Required checks: `make check`, `make test`, and `make test-grpc` (`mingw32-make` on Windows). Integration testing starts an ephemeral C++ server and checks validation, all widths, 32 concurrent writers, stale writes, and the Rust demo. Backend-only success does not prove interoperability.
 
@@ -70,13 +72,13 @@ This prefix is local and ignored, not part of a fresh clone. A fresh clone needs
 
 ## Budget
 
-Plan at most 14% of each full weekly provider/account allowance per Bangkok day. Agents sharing a quota pool share this target. The HPP continuation started at 13:01 with 2% weekly / 14% five-hour usage and finished with 3% weekly / 21% five-hour usage, with identical reset timestamps: one observed weekly percentage point during that interval. This does not establish full-day use or exclusive chat attribution. Earlier windows and timestamp differences remain recorded in `progress.md`. Other providers' metrics are unavailable; this policy does not configure provider limits.
+The owner now requires a daily workflow limit of 14% of each full weekly allowance: halt feature work when observed daily consumption or a supported conservative estimate reaches that threshold, then report completed work and tomorrow's tasks. Shared-account agents share the allowance. This does not configure provider limits. Earlier window changes and unavailable metrics prevent an exact full-day total; preserve that uncertainty and never invent a quota-triggered halt.
 
-Latest feature-inventory session usage observations: 13:22 Bangkok, 4% weekly / 25% five-hour; closing observation 13:24 Bangkok, 4% weekly / 27% five-hour, with identical reset timestamps. Displayed weekly usage was unchanged within the interval; this does not establish full-day use or exclusive attribution. Earlier observations remain in `progress.md`.
+Latest protocol-session observations: 13:30 Bangkok, 4% weekly / 28% five-hour; closing observation 13:33 Bangkok, 5% weekly / 30% five-hour. Reset timestamps differ by one second, so no exact interval usage delta or actual reset is asserted. Available evidence does not establish that the daily 14% threshold was reached. Other-provider metrics and complete daily attribution remain unavailable; earlier observations are retained in `progress.md`.
 
 ## Next tasks
 
-1. Architect review: settle register-map/slot ownership, protobuf compatibility, and the actuator/PermaCore trust boundary before integrating the planner with actuation.
+1. Architect review: review `proto/README.md`, component/sensor allowlists, Micro-State transition semantics, revision/instance lifecycle, direct register-write ownership, and completion evidence. Settle register-map/slot ownership, compatibility, and the trust boundary before implementing new handlers or integrating wear accounting.
 2. Validate HPP portability and representative latency distributions on intended targets before changing alignment, memory order, or deployment defaults.
 3. Review journal durability on target platforms and design authenticated/monotonic metadata and compaction before hardware integration.
 4. Design evidence-based quarantine reconciliation; do not silently reconstruct quarantined slots as healthy.

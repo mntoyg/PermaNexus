@@ -6,7 +6,7 @@ PermaNexus explores a polyglot architecture for extending hardware service life.
 
 | Directory | Language | Responsibility | Current status |
 | --- | --- | --- | --- |
-| `proto/` | Protocol Buffers | Shared versioned contracts | Register read and compare-and-write |
+| `proto/` | Protocol Buffers | Shared versioned contracts | Register transactions implemented; telemetry/Micro-State contract scaffolding |
 | `src/layer1_actuator/` | C++ / Assembly | Hardware access and low-latency actuation | HPP atomic RAM simulator and benchmarks; no MMIO |
 | `src/layer2_permacore/` | Rust | Memory safety and wear-leveling | Safe gRPC client, journaled write-budget planner, and demos |
 | `src/layer3_omni_agent/` | Go | Concurrent orchestration | Reserved directory |
@@ -27,6 +27,10 @@ The C++ server binds only to `127.0.0.1`, stores registers in memory, and permit
 | 16 | 32 bits | 1 | Read only |
 
 Actuator register state resets on restart. The Rust client only accepts `http://127.0.0.1:<port>`, sets two-second RPC deadlines, and does not automatically retry writes. A timeout does not prove a write failed. TLS, caller authentication, persistent actuator values, real MMIO, and hardware-backed wear-leveling are not implemented. Loopback does not authenticate other local processes.
+
+## Telemetry and Micro-State contracts
+
+The additive `ReadTelemetry` and `ApplyCommand` RPCs define `TelemetryData` (sensor value, unit, time, state snapshot) and `ActuatorCommand` (component target, desired Micro-State, state/revision/instance preconditions). These endpoints currently return `UNIMPLEMENTED`; no sensors or Micro-State executor are connected. See [protocol contracts and architect acceptance gates](proto/README.md). Existing register RPCs remain implemented.
 
 ## Simulated wear-leveling policy
 
@@ -155,7 +159,7 @@ The demo reads the 32-bit register at offset 4, compares the current value, writ
 
 All committed Markdown, identifiers, and code comments use English. The owner may request Thai conversations.
 
-Agents should plan daily use below 14% of their provider/account's full weekly allowance, preserving 2% across seven days. This repository policy is a planning target, not an enforced subscription setting. Shared usage and unavailable metrics must be recorded honestly. See [AGENTS.md](AGENTS.md).
+The owner requires stopping feature work when observed daily use or a supported conservative estimate reaches 14% of the provider/account's full weekly allowance, then reporting completed work and tomorrow's tasks. This workflow limit does not configure subscription settings. Shared usage, reset boundaries, and unavailable metrics must be recorded honestly. See [AGENTS.md](AGENTS.md).
 
 Cursor can load the root `AGENTS.md` directly. `CLAUDE.md` imports the shared rules for Claude Code. `.aider.conf.yml` loads shared instructions as read-only context and the two daily records as editable files. Existing model choices and credentials are not changed. These files guide agents; they are not a security sandbox or guaranteed quota enforcement. Configuration references: [Cursor rules](https://cursor.com/docs/rules), [Claude project memory](https://code.claude.com/docs/en/memory), and [Aider YAML configuration](https://aider.chat/docs/config/aider_conf.html).
 

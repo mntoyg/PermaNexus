@@ -9,6 +9,9 @@ package permanexus.actuator.v1;
 service HardwareActuator {
   rpc ReadRegister(ReadRegisterRequest) returns (ReadRegisterResponse);
   rpc WriteRegister(WriteRegisterRequest) returns (WriteRegisterResponse);
+  // Contract scaffolding: the current simulator returns UNIMPLEMENTED.
+  rpc ReadTelemetry(TelemetryRequest) returns (TelemetryData);
+  rpc ApplyCommand(ActuatorCommand) returns (ActuatorCommandResult);
 }
 
 enum RegisterWidth {
@@ -50,6 +53,104 @@ message WriteRegisterResponse {
   // Previous register value returned after a successful compare-and-write.
   fixed64 previous_value = 1;
 }
+
+// Logical names resolved through configured device/component allowlists.
+// Each ID must contain 1..64 ASCII letters, digits, underscores, dots, or hyphens.
+// IDs are never paths, physical addresses, or caller-supplied register maps.
+message ComponentTarget {
+  string device_id = 1;
+  string component_id = 2;
+}
+
+enum TelemetryUnit {
+  TELEMETRY_UNIT_UNSPECIFIED = 0;
+  TELEMETRY_UNIT_CELSIUS = 1;
+  TELEMETRY_UNIT_VOLTS = 2;
+  TELEMETRY_UNIT_AMPERES = 3;
+  TELEMETRY_UNIT_WATTS = 4;
+  TELEMETRY_UNIT_HERTZ = 5;
+  // Dimensionless fraction in [0, 1], not a percentage in [0, 100].
+  TELEMETRY_UNIT_RATIO = 6;
+}
+
+// Device policy defines the allowed transitions and their hardware meaning.
+// These labels do not authorize register writes or guarantee energy savings.
+enum MicroState {
+  MICRO_STATE_UNSPECIFIED = 0;
+  MICRO_STATE_ACTIVE = 1;
+  MICRO_STATE_IDLE = 2;
+  MICRO_STATE_LOW_POWER = 3;
+}
+
+message MicroStateSnapshot {
+  // UNSPECIFIED and unknown enum values are invalid.
+  MicroState state = 1;
+  // Required; zero is a valid initial revision. Increment for each successful
+  // command, including a same-state command. Never wrap or reuse a revision.
+  optional uint64 revision = 2;
+  // Exactly 16 bytes identifying the server's current state incarnation.
+  // Must change after restart/reset or loss of revision history.
+  // This identity is a concurrency precondition, not authentication.
+  bytes instance_id = 3;
+}
+
+message TelemetryRequest {
+  // Required allowlisted component.
+  ComponentTarget target = 1;
+  // Required allowlisted sensor ID, with the same syntax/length as target IDs.
+  string sensor_id = 2;
+}
+
+message TelemetryData {
+  // Required; must match the request target and sensor ID.
+  ComponentTarget target = 1;
+  string sensor_id = 2;
+  // Required finite reading; absence is not a zero reading.
+  optional double value = 3;
+  // Required recognized unit matching configured sensor policy.
+  TelemetryUnit unit = 4;
+  // Required UTC Unix-epoch nanoseconds at sampling; zero is a valid timestamp.
+  // Wall-clock time is metadata, not ordering or proof of freshness.
+  optional uint64 sampled_at_unix_ns = 5;
+  // Required atomic state/revision/instance snapshot for this component.
+  // Sensor sampling and this snapshot are not a multi-register transaction.
+  MicroStateSnapshot observed_state = 6;
+}
+
+message ActuatorCommand {
+  // Exactly 16 bytes, echoed for correlation. Not a deduplication/retry token.
+  bytes command_id = 1;
+  // Required allowlisted component; never an arbitrary hardware address.
+  ComponentTarget target = 2;
+  // UNSPECIFIED and unknown states are invalid. Device policy must permit it.
+  MicroState desired_state = 3;
+  // Required state, revision, and instance preconditions checked atomically
+  // with the transition. No mutation on mismatch or failed policy checks.
+  MicroStateSnapshot expected_state = 4;
+}
+
+message ActuatorCommandResult {
+  // Echo the request identity and target only after definitive completion.
+  bytes command_id = 1;
+  ComponentTarget target = 2;
+  MicroStateSnapshot previous_state = 3;
+  // Same instance, requested state, previous revision + 1.
+  MicroStateSnapshot current_state = 4;
+}
+
+// Future telemetry/command implementations must enforce these contracts:
+// - Validate required presence, ID lengths/syntax, enums, finite readings,
+//   sensor units, component permissions, and the existing 4096-byte RPC bound.
+// - INVALID_ARGUMENT: invalid shape/value; NOT_FOUND: unknown target/sensor;
+//   PERMISSION_DENIED: policy rejects access or a transition.
+// - ABORTED: state/revision mismatch; FAILED_PRECONDITION: instance mismatch
+//   or exhausted revision counter. Reject both before any state change.
+// - UNAVAILABLE: no usable sensor reading or hardware temporarily unavailable.
+// - UNIMPLEMENTED: endpoint/backend cannot meet the required safe semantics.
+// - Successful ApplyCommand means definitive completion, not queued acceptance.
+//   An ambiguous failure must never be reported as proof that no write occurred.
+// - Set deadlines and never automatically retry commands, including with the
+//   same command_id. Persisted wear accounting requires a separate integration.
 
 // Server errors use canonical gRPC status codes:
 // INVALID_ARGUMENT: missing address, invalid width, alignment, or value.

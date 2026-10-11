@@ -193,3 +193,23 @@ Verification: review inventory against repository paths and existing verificatio
 Mistakes/fixes: the first patch used a sentence fragment as a full-line handoff match and was rejected without changing files. Verified that no partial edits were applied, then reapplied against the actual line. No build/test failure occurred.
 
 Usage: baseline 13:22 Bangkok, 4% weekly / 25% five-hour; closing observation 13:24 Bangkok, 4% weekly / 27% five-hour. Both observations reported weekly reset 1792301671 and five-hour reset 1791714871. Displayed weekly usage was unchanged in this interval; full-day consumption, finer-grained usage, and exclusive chat attribution cannot be inferred. Other providers' metrics remain unavailable. Commit message: `Document implemented features and the project roadmap`.
+
+### Day 1 protocol extension — Telemetry and targeted Micro-State commands
+
+Plan/acceptance criteria: extend the existing v1 schema additively with sensor telemetry and component-targeted commands; preserve published register fields/RPC semantics; specify presence, units, safety/concurrency preconditions, and unknown-outcome rules; compile both language bindings; verify unsupported new endpoints cannot mutate current registers; prepare architect review context.
+
+Completed:
+
+- Added `ComponentTarget`, `TelemetryUnit`, `MicroState`, `MicroStateSnapshot`, `TelemetryRequest`, `TelemetryData`, `ActuatorCommand`, and `ActuatorCommandResult`, plus unary `ReadTelemetry`/`ApplyCommand` RPCs. Existing field numbers and RPC names are unchanged.
+- Defined finite readings, explicit units, zero-versus-absence, configured logical targets, command correlation without automatic retries, and state/revision/instance preconditions. Comments specify validation; decoding alone does not enforce it.
+- Added `proto/README.md` with endpoint status, future backend acceptance gates, direct-register-write ownership questions, and completion/recovery requirements. Current new endpoints return generated `UNIMPLEMENTED`; no sensors, Micro-State executor, revision store, or new safe Rust wrapper was added.
+- Added two Rust wire tests and extended real C++/Rust integration to verify both unsupported endpoints and unchanged values for all five registers. Updated feature F010, README, and handoff.
+- Updated the prior soft budget guidance to the owner's explicit 14% daily workflow limit and halt/report requirement. This changes agent instructions, not subscription/provider settings or recurring jobs.
+
+Verification: `mingw32-make check test test-grpc` with the existing isolated dependency prefix passed. C++/Rust bindings regenerated and compiled, two CTest backend checks passed, 22 Rust tests passed, and the dedicated integration test passed. Ordinary Cargo execution explicitly ignored that integration test before the separate run. New bindings and build products remain ignored. No journal, hardware, dependency lockfile, or installed toolchain changed.
+
+Mistakes/fixes: no build or test failure occurred. Documentation review moved the new protocol paragraph into its own README section before publication; the initial placement under wear-leveling was misleading.
+
+Usage: baseline 13:30 Bangkok, weekly 4% (reset 1792301670), five-hour 28% (reset 1791714870); closing observation 13:33 Bangkok, weekly 5% (reset 1792301671), five-hour 30% (reset 1791714871). The one-second timestamp difference is recorded without asserting a reset or exact interval delta. Earlier daily use/shared-account attribution and other-provider metrics remain incomplete. Evidence does not establish reaching 14% daily usage; no quota-triggered halt is claimed.
+
+Tomorrow's target: architect review of component/sensor policies, state transitions, instance/revision lifecycle, direct register-write interaction, and definitive/unknown completion evidence before implementing simulated new handlers or planner integration. Commit message: `Add telemetry and targeted micro-state protocol contracts`.

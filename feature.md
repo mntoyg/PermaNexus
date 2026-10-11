@@ -15,7 +15,7 @@ The current system simulates owned RAM registers and storage write budgets. A 10
 
 ## Implemented features
 
-All entries below were delivered on 2026-10-11. Verification reflects recorded earlier runs, not tests rerun for this inventory update.
+All entries below were delivered on 2026-10-11. Verification distinguishes implemented endpoints from contract scaffolding and records the relevant test runs.
 
 | ID | Feature | Implementation and scope | Verification and limits |
 | --- | --- | --- | --- |
@@ -27,9 +27,10 @@ All entries below were delivered on 2026-10-11. Verification reflects recorded e
 | F006 | Persistent journal and simulation CLI | [wear_journal.rs](src/layer2_permacore/src/wear_journal.rs) and [wear_simulator.rs](src/layer2_permacore/src/bin/wear_simulator.rs): exclusive file lock, flushed append-only events, bounded CRC/sequence/semantic replay, explicit initialization, resume/configuration checks, I/O-failure poisoning. | Tests cover interruption, locking, corruption, incomplete tails, capacity, and I/O errors. Owner resumed 500 writes per slot / 2000 remaining. See [journal specification](src/layer2_permacore/JOURNAL_FORMAT.md); no compaction, authenticated anti-rollback, or quarantine reactivation. |
 | F007 | HPP primitives and atomic backend | Three C++17 headers for integer bit validation, aligned owned RAM atomics, and bounded spin hints; optional atomic-link fallback. See [HPP.md](src/layer1_actuator/HPP.md). | Bit-boundary, all-width, alignment, stale-write, and concurrency checks passed on Windows x86_64 GCC. ARM/MSVC/libatomic fallback execution remains unverified. |
 | F008 | HPP benchmark | [hpp_benchmark.cpp](src/layer1_actuator/benchmarks/hpp_benchmark.cpp): bounded atomic/mutex single-thread and contended workloads, separate validated-bank workload, checksums, lock-free reporting. | Four benchmark-build CTest checks passed. Two agent-run samples and one owner-reported sample are in HPP.md. No RPC latency, energy, or lifespan measurement; lock-free does not guarantee higher throughput. |
-| F009 | Contributor rules and records | AGENTS, CLAUDE, Aider configuration, README, feature inventory, progress, and handoff. English project documentation; daily 14% weekly-allowance planning target. | Guidance does not enforce a sandbox or provider quotas. Other providers' usage metrics remain unavailable. |
+| F009 | Contributor rules and records | AGENTS, CLAUDE, Aider configuration, README, feature inventory, progress, and handoff. English documentation; owner-required daily 14% weekly-allowance workflow limit and halt/report rule. | Guidance does not enforce a sandbox or provider quota settings. Daily totals must not be invented when metrics are incomplete. |
+| F010 | Telemetry and targeted Micro-State protocol scaffolding | Additive `ReadTelemetry`/`ApplyCommand` RPCs and `TelemetryData`/`ActuatorCommand` messages; typed units, presence-bearing readings/revisions, component targeting, instance/state/revision preconditions. See [protocol contract](proto/README.md). | C++/Rust bindings compiled; two wire tests passed; real integration verified `UNIMPLEMENTED` and unchanged registers. No sensors, Micro-State executor, revision store, or new safe Rust wrapper. |
 
-Latest recorded executable verification: 20 Rust regression tests, the dedicated C++/Rust integration test, and four checks in the gRPC-free HPP benchmark build passed on Windows. Ordinary Cargo tests deliberately ignore the integration test; it is run separately. Linux/macOS execution and physical power-loss durability remain unverified.
+Latest protocol verification: 22 Rust tests, two C++ backend checks, and the dedicated C++/Rust integration test passed on Windows after regenerating bindings. The earlier gRPC-free HPP benchmark build passed four checks. Ordinary Cargo tests deliberately ignore the integration test; it is run separately. Linux/macOS execution and physical power-loss durability remain unverified.
 
 ## Planned work and design dependencies
 
@@ -37,7 +38,7 @@ Prioritize contract review and simulation safety before hardware integration. De
 
 | ID | Status | Feature or milestone | Dependencies and acceptance criteria |
 | --- | --- | --- | --- |
-| P001 | Planned | Architect review of actuator/planner integration | Document register-map/slot ownership, trust boundary, protobuf compatibility, and authoritative completion evidence. Preserve simulation boundaries and prohibit ambiguous write retries. |
+| P001 | Planned | Architect review of actuator/planner integration | Review the new protocol, component/sensor policy, instance/revision lifecycle, and direct-register-write interaction; settle register-map/slot ownership, trust boundary, compatibility, and completion evidence. Preserve simulation boundaries and prohibit ambiguous write retries. |
 | P002 | Planned | HPP portability and representative measurements | Execute checks on intended platforms, including ARM/MSVC and required atomic-link fallback; gather repeated representative timing distributions before changing alignment, memory order, or defaults. |
 | P003 | Design required | Journal durability, integrity, and compaction | Review target filesystem/device flush behavior; design authenticated metadata, a trusted monotonic reference, bounded compaction, and interruption recovery preserving charges/quarantine. CRC alone is insufficient. |
 | P004 | Design required | Quarantine reconciliation | Specify authoritative evidence and auditable transitions. Unknown outcomes remain charged and quarantined until evidence supports a reviewed decision; never silently reactivate slots. |

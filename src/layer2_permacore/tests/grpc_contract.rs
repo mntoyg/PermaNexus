@@ -1,6 +1,7 @@
 use permanexus_permacore::{
     actuator::{
-        hardware_actuator_client::HardwareActuatorClient, ReadRegisterRequest, RegisterAddress,
+        hardware_actuator_client::HardwareActuatorClient, ActuatorCommand, ComponentTarget,
+        MicroState, MicroStateSnapshot, ReadRegisterRequest, RegisterAddress, TelemetryRequest,
         WriteRegisterRequest,
     },
     ActuatorClient,
@@ -94,6 +95,39 @@ async fn cpp_server_and_rust_client_obey_the_contract() {
     let mut raw = HardwareActuatorClient::connect(endpoint.clone())
         .await
         .unwrap();
+    let target = ComponentTarget {
+        device_id: "simulated-0".into(),
+        component_id: "core-0".into(),
+    };
+    assert_eq!(
+        raw.read_telemetry(request(TelemetryRequest {
+            target: Some(target.clone()),
+            sensor_id: "temperature".into(),
+        }))
+        .await
+        .unwrap_err()
+        .code(),
+        Code::Unimplemented
+    );
+    assert_eq!(
+        raw.apply_command(request(ActuatorCommand {
+            command_id: vec![1; 16],
+            target: Some(target),
+            desired_state: MicroState::LowPower as i32,
+            expected_state: Some(MicroStateSnapshot {
+                state: MicroState::Active as i32,
+                revision: Some(0),
+                instance_id: vec![2; 16],
+            }),
+        }))
+        .await
+        .unwrap_err()
+        .code(),
+        Code::Unimplemented
+    );
+    for (offset, width, value) in [(0, 1, 0), (2, 2, 0), (4, 3, 0), (8, 4, 0), (16, 3, 1)] {
+        assert_eq!(client.read(address(offset, width)).await.unwrap(), value);
+    }
     assert_eq!(
         raw.read_register(request(ReadRegisterRequest { address: None }))
             .await
