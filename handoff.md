@@ -1,8 +1,14 @@
 # Agent handoff
 
-Last updated: 2026-10-11, Asia/Bangkok.
+Last updated: 2026-10-25, Asia/Bangkok.
 
 ## Context
+
+Current stage (2026-10-25): allowlisted synthetic read-only telemetry is implemented. See the fixture table in `proto/README.md`; all readings are deterministic RAM simulation data. Each component owns a separate locked ACTIVE/revision-zero snapshot with the process's OS-random 16-byte instance ID. Startup fails before binding if the random source fails. Register RPCs and wear-planner state remain independent; ApplyCommand is still UNIMPLEMENTED. No wire-contract change was required (one implementation-status comment was corrected).
+
+Contributor changes were already present in AGENTS.md, feature.md, progress.md, handoff.md, and proto/README.md. Baseline copies are preserved locally in ignored `build/telemetry-baseline/`; no reset, stash, or overwrite of unrelated work was performed. The owner subsequently requested committing and publishing the completed stage, including the reviewed architecture/budget records.
+
+Publication authorization: the owner explicitly requested committing and pushing this completed stage to origin/main. The combined implementation and related architecture/budget records were reviewed, existing tests remain applicable, and origin/main was fetched with no divergence. Commit message: `Implement allowlisted synthetic read-only telemetry`. Use `git log -1`, `git status`, and `git ls-remote origin refs/heads/main` to verify actual publication state. There are no remaining implementation/test blockers for the approved read-only stage.
 
 Read `AGENTS.md`, `README.md`, `feature.md`, and `progress.md`, then inspect Git status. Conversations with the owner use Thai; all committed Markdown, identifiers, and code comments use English.
 
@@ -10,9 +16,9 @@ Repository: `https://github.com/mntoyg/PermaNexus`, branch `main`. Persistence r
 
 ## Implementation
 
-- `feature.md` tracks implemented capabilities F001-F010 and roadmap items P001-P011, with evidence, limitations, and design dependencies. F010 is protocol scaffolding, not implemented sensor/control endpoints. Keep IDs stable and update it when feature scope/status changes. README links it; AGENTS requires reading/maintaining it; Aider loads it as an editable project record.
+- `feature.md` tracks F001-F011 and P001-P011. F010 defines the wire contract; F011 implements synthetic ReadTelemetry only. Command execution remains design-dependent. Keep IDs stable and update evidence/status with future work.
 
-- `proto/actuator.proto`: existing register contracts plus additive `ReadTelemetry`/`ApplyCommand`, `TelemetryData`, and `ActuatorCommand`. New endpoints use typed units, logical component targets, and required instance/state/revision preconditions. The generated C++ service defaults return `UNIMPLEMENTED`; no sensors/control handlers are connected. Read `proto/README.md` for validation semantics and architect review gates. Preserve published field numbers.
+- `proto/actuator.proto`: register and telemetry/command contracts with unchanged field numbers/signatures. C++ `telemetry_store.cpp` implements fixture selection and validation; `actuator_service.cpp` maps telemetry statuses to gRPC while preserving register handlers. Only ApplyCommand retains the generated UNIMPLEMENTED default. Read `proto/README.md` for fixture/error semantics and the remaining command-stage review gates.
 - C++: five in-memory registers on `simulated-0`; immutable descriptors, aligned per-register strong CAS, preserved validation/read-only policy, bounded messages, and loopback-only gRPC server.
 - HPP: three C++17 `.hpp` headers for bit validation, owned RAM atomics, and spin hints; optional benchmark and CMake atomic-link compatibility probe. Read `src/layer1_actuator/HPP.md` before interpreting timings or adding hardware-oriented primitives.
 - Rust: generated contracts, safe client wrapper with deadlines and no write retries, plus an increment-and-verify demo.
@@ -23,6 +29,10 @@ Repository: `https://github.com/mntoyg/PermaNexus`, branch `main`. Persistence r
 - `CLAUDE.md` imports the shared rules; Aider configuration loads shared rules and editable daily records. Cursor uses root `AGENTS.md`. These are guidance/context files, not hard enforcement or a runtime sandbox.
 
 ## Verification
+
+Telemetry-stage evidence: four C++ CTest checks (register bank, HPP, new telemetry backend, new service status mapping), 22 ordinary Rust tests, and two dedicated real C++/Rust integration tests passed with the existing dependency setup. Coverage includes invalid/missing IDs, unknown/cross-component pairs, zero presence, unavailable/invalid samples, finite/unit checks, oversized RPC rejection, 16 concurrent backend readers, 32 concurrent RPC readers, fresh instance ID after restart, and independence from all five registers. The ordinary Rust run deliberately ignores both transport tests before the separate run. Logs are local/ignored at `build/test-results/2026-10-25-telemetry-final.log`; an initial namespace-extraction compile failure is retained separately and was corrected before passing verification.
+
+Windows BCrypt randomness and startup success were exercised. Random-source failure was injected at the identity-generator unit boundary; a forced OS failure in a server subprocess was not executed. Linux/macOS random-source branches remain unexecuted. No real sensors, hardware access, caller authentication, command transitions, persistent Micro-State, or new Rust telemetry wrapper are claimed.
 
 Owner-requested rerun at 13:37 Bangkok on source `fa1be05436e7a67dd84cb72283654ccf993d3673`: Rust formatting/check passed; actuator CTest 2/2, Rust 22/22, dedicated gRPC integration 1/1, and existing HPP CTest 4/4 passed. Ordinary Cargo ignored integration by design before the separate successful execution. HPP reused its existing build, including benchmark smoke/invalid-argument checks; no new timing sample is claimed. Raw output is local/ignored at `build/test-results/2026-10-11-1337-tests.log`. No source or runtime journal changed.
 
@@ -74,13 +84,15 @@ This prefix is local and ignored, not part of a fresh clone. A fresh clone needs
 
 ## Budget
 
+Current implementation-session observations on 2026-10-25: 21:13 Bangkok, 6% weekly / 3% five-hour; 21:28, 7% weekly / 10% five-hour, with identical reset timestamps 1793520713 / 1792955130. Observed weekly increase: one percentage point in the interval. Full-day/shared-account attribution and other-provider metrics remain incomplete; reaching the daily 14-point threshold is not established. Preserve this uncertainty and stop feature work immediately if later evidence reaches the cap.
+
 The owner now requires a daily workflow limit of 14% of each full weekly allowance: halt feature work when observed daily consumption or a supported conservative estimate reaches that threshold, then report completed work and tomorrow's tasks. Shared-account agents share the allowance. This does not configure provider limits. Earlier window changes and unavailable metrics prevent an exact full-day total; preserve that uncertainty and never invent a quota-triggered halt.
 
 Latest test-session observations: 13:37 Bangkok, 5% weekly / 32% five-hour; closing observation 13:38 Bangkok, 5% weekly / 33% five-hour. Reset timestamps differ by one second, so no exact interval usage delta or actual reset is asserted. Available evidence does not establish that the daily 14% threshold was reached. Other-provider metrics and complete daily attribution remain unavailable; earlier observations are retained in `progress.md`.
 
 ## Next tasks
 
-1. Architect review: review `proto/README.md`, component/sensor allowlists, Micro-State transition semantics, revision/instance lifecycle, direct register-write ownership, and completion evidence. Settle register-map/slot ownership, compatibility, and the trust boundary before implementing new handlers or integrating wear accounting.
+1. **Next focus — remaining P001 command-stage review:** the approved synthetic read-only telemetry stage is complete (F011); retain its allowlist, separate state authority, OS-random identity, validation, and register/planner independence. Keep ApplyCommand UNIMPLEMENTED until the owner approves an explicit per-component transition/permission table. Future transition tests must cover atomic preconditions, revision exhaustion, instance mismatch, single-winner contention, and unknown outcomes before commands are enabled. Preserve loopback-only simulation and avoid hardware/caller-authentication claims. At the 14% daily cap, every AI contributor must stop feature work and update this handoff immediately as required by AGENTS.md.
 2. Validate HPP portability and representative latency distributions on intended targets before changing alignment, memory order, or deployment defaults.
 3. Review journal durability on target platforms and design authenticated/monotonic metadata and compaction before hardware integration.
 4. Design evidence-based quarantine reconciliation; do not silently reconstruct quarantined slots as healthy.

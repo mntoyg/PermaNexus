@@ -1,5 +1,51 @@
 # Daily progress
 
+## 2026-10-25 — Owner-authorized telemetry publication
+
+Plan/acceptance criteria: review the staged telemetry implementation and pending architecture/budget documentation, preserve contributor content, verify origin/main and whitespace, stage explicit paths, commit, push normally, and confirm local/remote commit equality.
+
+The owner explicitly requested automating the commit to the main repository after the implementation handoff. Reviewed all 18 pending project paths, including the related contributor architecture and budget records, without reverting their content. Fetched origin/main; main had no divergence. Production/test code is unchanged from the successful four C++ / 22 Rust / two gRPC checks, so no redundant executable test run was needed. Whitespace checks passed; runtime logs, baseline copies, dependencies, and journals remain ignored. Publication commit message: `Implement allowlisted synthetic read-only telemetry`. No additional feature work, environment changes, or new mistakes occurred. Remaining work is the reviewed command-policy decision and portability verification.
+
+Usage observations during publication preparation at 21:31 Bangkok: 7% weekly / 13% five-hour at opening and closing, with identical resets 1793520712 / 1792955130. Rounded unchanged readings do not imply zero consumption; full-day/shared-account attribution and other-provider metrics remain unavailable. No evidence establishes reaching the daily 14-point threshold. The preceding implementation's unpublished state remains recorded below as history; this explicit follow-up authorizes its publication.
+
+## 2026-10-25 — Approved synthetic read-only telemetry implementation
+
+Plan/acceptance criteria: implement ReadTelemetry only with immutable server-owned fixtures, strict request/sample validation, consistent separate per-component snapshots, a fresh OS-random process ID (fail startup on failure), and register/planner independence. Preserve loopback/message limits and all published wire fields; keep ApplyCommand UNIMPLEMENTED. Run required C++/Rust checks and transport integration, review the diff, and preserve existing contributor work.
+
+Completed: added a telemetry backend and OS-random identity helper; extracted existing register handlers into a testable service without changing behavior; implemented ReadTelemetry status mapping. Documented the exact simulator-only component/sensor catalog and epoch-zero sample timestamp in proto/README.md and README.md. Added feature F011 and updated the remaining P001 command-stage review gate. Micro-State is immutable ACTIVE/revision zero per component, protected by its own snapshot lock; no transition API, register mapping, planner-slot mapping, physical sensor, or caller-authentication behavior was added. No protobuf contract change was required; only a stale implementation-status comment was corrected.
+
+Verification: `mingw32-make check test test-grpc` passed using the existing isolated dependency prefix. Four CTest checks passed (register bank, HPP, telemetry backend, C++ service), all 22 ordinary Rust tests passed, and both dedicated real C++/Rust gRPC tests passed. Ordinary Cargo deliberately ignored both transport tests before the separate successful run. Coverage includes malformed/missing IDs, 64/65-byte boundaries, unknown/cross-component pairs, finite/unit/ratio validation, absent versus zero samples, unavailable data, 4096-byte message bounds, 16 concurrent backend readers, 32 concurrent RPC readers, unchanged register values, independent register writes, and fresh 16-byte identity after restart. Final full output: ignored `build/test-results/2026-10-25-telemetry-final.log`.
+
+Mistake/fix: extracting the C++ service initially damaged the anonymous namespace closure in server.cpp and caused a compilation failure before tests could execute. Corrected the closure, reviewed the extraction, and reran the required suite successfully; initial failure output is retained locally as `build/test-results/2026-10-25-telemetry-initial-failure.log`. A duplicated namespace comment was also cleaned up during review. No runtime test failures remained.
+
+Limits and next steps: Windows OS randomness was exercised; injected identity-generator failure rejected partial results, but a server subprocess with forced OS randomness failure was not executed. Linux/macOS random paths are implemented but unexecuted. There are no state transitions, physical readings, persistent Micro-State, new Rust telemetry wrapper, or hardware writes. Next: obtain a reviewed per-component transition/permission policy before enabling ApplyCommand; portability verification remains separate work. Existing runtime journal, dependency locks, toolchains, and credentials were not changed.
+
+Contributor/publication state: AGENTS.md, feature.md, handoff.md, progress.md, and proto/README.md had pre-existing edits at task start. Preserved their architectural/budget decisions and history; baseline copies are local/ignored under build/telemetry-baseline. Implementation paths are staged only after diff review; shared contributor documentation remains unstaged for combined review. No commit or push is performed in this task, so prior contributor edits are not silently included in a publication.
+
+Usage: opening observation 21:13 Bangkok, 6% weekly / 3% five-hour; closing observation 21:28 Bangkok, 7% weekly / 10% five-hour. Reset timestamps remained 1793520713 (weekly) / 1792955130 (five-hour). The displayed weekly increase is one percentage point during the observed interval, not an exact full-day or exclusive-chat total. Earlier daily usage and other providers' metrics remain incomplete; the available observations do not establish reaching the daily 14-point cap. No provider quota settings or recurring jobs changed.
+
+## 2026-10-25 — Next feature focus and contributor usage rule
+
+Plan and acceptance criteria: establish the next development focus from the current roadmap; clarify that every AI contributor follows the daily 14-percentage-point cap for each full weekly provider/account allowance; require feature work to stop and `handoff.md` to be updated at the cap. Select P001 architect review as the gate before implementing telemetry/Micro-State handlers. Acceptance requires explicit decisions for component/sensor allowlists, state transitions, revision/instance lifecycle, register-write ownership, trust boundary, and completion evidence.
+
+Completed: clarified the shared AI-contributor budget rule in `AGENTS.md`; ordered P001 and its follow-on simulated implementation/checks in `handoff.md`. No feature code or runtime behavior changed. The handlers remain planned and must retain `UNIMPLEMENTED` behavior where policy is unresolved. No publication or test execution was requested by this planning/documentation task.
+
+Usage observations: opening Codex account metrics at session start showed 5% weekly usage (7-day window, reset timestamp 1793520713) and 0% five-hour usage (reset timestamp 1792955130). These are mid-day observations and do not establish earlier Bangkok-day consumption. Other provider/account metrics are unavailable. The weekly percentage alone does not establish whether the daily 14-point workflow threshold has been reached; no threshold halt is claimed. Capture a closing observation if available before ending this session.
+
+Next task: complete P001 architect review and record decisions before enabling telemetry or Micro-State handlers. No code changes or executable checks were made in this session.
+
+### 2026-10-25 — P001 architecture review
+
+Plan and acceptance criteria: inspect the versioned protocol, C++ service/register bank, Rust client, and independent wear planner. Settle safe initial implementation scope, state ownership, direct-register interaction, restart identity, trust boundaries, and ambiguous completion behavior without assuming physical device semantics.
+
+Completed review and recorded in `proto/README.md`: stage telemetry first using explicit allowlisted deterministic synthetic fixtures; keep them labeled as simulator data; store Micro-State separately in RAM with consistent per-component snapshots; use a fresh OS-random 16-byte process instance ID and fail startup if randomness is unavailable; leave register bank and Rust wear planner independent; keep `ApplyCommand` `UNIMPLEMENTED` until a per-component transition/permission table is explicitly approved. The instance ID is not authentication, loopback does not authenticate local callers, and lost post-dispatch responses remain unknown outcomes. No code or runtime behavior changed.
+
+Unresolved product input: exact initial simulated component/sensor fixture identifiers and values may be selected as documented test fixtures during implementation; real sensor inventory and physical transition policy remain out of scope. Verification: inspected `proto/README.md`, `proto/actuator.proto`, `src/layer1_actuator/server.cpp`, `register_bank.cpp`/header, and Rust client/planner. No executable checks run because this was a documentation-only architecture review. `git status` identifies pre-existing documentation edits from the prior planning turn; preserved them. `git diff --check` was previously blocked by Git reporting that the operation must run in a work tree despite successful `git status`; retry before publication.
+
+Usage: Codex weekly usage remained at 5% between available opening and closing observations; five-hour usage changed from 0% to 1%. These readings do not attribute earlier daily usage or establish full-day consumption. Other provider metrics unavailable; 14-point threshold not established.
+
+Next: hand the bounded telemetry implementation stage to SWE Codex for code changes and tests; keep this chat as architecture/review owner. Do not implement `ApplyCommand` or physical device behavior without a separately approved transition and safety design.
+
 Dates use Asia/Bangkok. Records distinguish implementation, verification, and plans; corrected mistakes remain documented.
 
 ## 2026-10-11 — Day 1

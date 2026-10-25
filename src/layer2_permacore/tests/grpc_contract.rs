@@ -2,7 +2,7 @@ use permanexus_permacore::{
     actuator::{
         hardware_actuator_client::HardwareActuatorClient, ActuatorCommand, ComponentTarget,
         MicroState, MicroStateSnapshot, ReadRegisterRequest, RegisterAddress, TelemetryRequest,
-        WriteRegisterRequest,
+        TelemetryUnit, WriteRegisterRequest,
     },
     ActuatorClient,
 };
@@ -34,9 +34,17 @@ fn request<T>(message: T) -> Request<T> {
     request
 }
 
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-#[ignore = "Requires the C++ simulator; run make test-grpc"]
-async fn cpp_server_and_rust_client_obey_the_contract() {
+fn telemetry_request(component: &str, sensor: &str) -> TelemetryRequest {
+    TelemetryRequest {
+        target: Some(ComponentTarget {
+            device_id: "simulated-0".into(),
+            component_id: component.into(),
+        }),
+        sensor_id: sensor.into(),
+    }
+}
+
+fn start_server() -> (ServerProcess, String) {
     let path_file =
         std::env::var("PERMANEXUS_ACTUATOR_PATH_FILE").expect("Missing executable path file");
     let executable = std::fs::read_to_string(path_file).expect("Read executable path");
@@ -66,6 +74,13 @@ async fn cpp_server_and_rust_client_obey_the_contract() {
             .strip_prefix("LISTENING ")
             .expect("Server address")
     );
+    (server, endpoint)
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[ignore = "Requires the C++ simulator; run make test-grpc"]
+async fn cpp_server_and_rust_client_obey_the_contract() {
+    let (_server, endpoint) = start_server();
     let mut client = ActuatorClient::connect(&endpoint)
         .await
         .expect("Connect Rust client");
@@ -99,16 +114,15 @@ async fn cpp_server_and_rust_client_obey_the_contract() {
         device_id: "simulated-0".into(),
         component_id: "core-0".into(),
     };
-    assert_eq!(
-        raw.read_telemetry(request(TelemetryRequest {
+    let sample = raw
+        .read_telemetry(request(TelemetryRequest {
             target: Some(target.clone()),
-            sensor_id: "temperature".into(),
+            sensor_id: "synthetic-temperature".into(),
         }))
         .await
-        .unwrap_err()
-        .code(),
-        Code::Unimplemented
-    );
+        .unwrap()
+        .into_inner();
+    assert_eq!(sample.value, Some(42.5));
     assert_eq!(
         raw.apply_command(request(ActuatorCommand {
             command_id: vec![1; 16],
@@ -229,4 +243,198 @@ async fn cpp_server_and_rust_client_obey_the_contract() {
         String::from_utf8_lossy(&demo.stderr)
     );
     assert!(String::from_utf8_lossy(&demo.stdout).contains("1 -> 2"));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "Requires the C++ simulator; run make test-grpc"]
+async fn synthetic_telemetry_is_allowlisted_consistent_and_read_only() {
+    let (server, endpoint) = start_server();
+    let mut raw = HardwareActuatorClient::connect(endpoint.clone())
+        .await
+        .unwrap();
+    let mut registers = ActuatorClient::connect(&endpoint).await.unwrap();
+    for (offset, width, value) in [(0, 1, 11), (2, 2, 22), (4, 3, 33), (8, 4, 44)] {
+        registers
+            .compare_write(address(offset, width), value, 0)
+            .await
+            .unwrap();
+    }
+    let fixtures = [
+        (
+            "core-0",
+            "synthetic-temperature",
+            42.5,
+            TelemetryUnit::Celsius,
+        ),
+        ("core-0", "synthetic-utilization", 0.0, TelemetryUnit::Ratio),
+        ("core-1", "synthetic-voltage", 1.0, TelemetryUnit::Volts),
+    ];
+    let mut instance_id = Vec::new();
+    for (component, sensor, value, unit) in fixtures {
+        let input = telemetry_request(component, sensor);
+        let sample = raw
+            .read_telemetry(request(input.clone()))
+            .await
+            .unwrap()
+            .into_inner();
+        assert_eq!(sample.target, input.target);
+        assert_eq!(sample.sensor_id, sensor);
+        assert_eq!(sample.value, Some(value));
+        assert!(sample.value.unwrap().is_finite());
+        assert_eq!(sample.unit, unit as i32);
+        assert_eq!(sample.sampled_at_unix_ns, Some(0));
+        let state = sample.observed_state.unwrap();
+        assert_eq!(state.state, MicroState::Active as i32);
+        assert_eq!(state.revision, Some(0));
+        assert_eq!(state.instance_id.len(), 16);
+        if instance_id.is_empty() {
+            instance_id = state.instance_id;
+        } else {
+            assert_eq!(state.instance_id, instance_id);
+        }
+    }
+    let mut invalid_requests = vec![TelemetryRequest::default()];
+    for invalid in [
+        "".to_owned(),
+        "a".repeat(65),
+        "a/b".into(),
+        "a b".into(),
+        "a\0b".into(),
+        "é".into(),
+    ] {
+        for field in 0..3 {
+            let mut input = telemetry_request("core-0", "synthetic-temperature");
+            match field {
+                0 => input.target.as_mut().unwrap().device_id = invalid.clone(),
+                1 => input.target.as_mut().unwrap().component_id = invalid.clone(),
+                _ => input.sensor_id = invalid.clone(),
+            }
+            invalid_requests.push(input);
+        }
+    }
+    for input in invalid_requests {
+        assert_eq!(
+            raw.read_telemetry(request(input)).await.unwrap_err().code(),
+            Code::InvalidArgument
+        );
+    }
+    let mut unknown_device = telemetry_request("core-0", "synthetic-temperature");
+    unknown_device.target.as_mut().unwrap().device_id = "unknown".into();
+    for input in [
+        unknown_device,
+        telemetry_request("unknown", "synthetic-temperature"),
+        telemetry_request("core-0", "unknown"),
+        telemetry_request("core-1", "synthetic-temperature"),
+        telemetry_request("core-0", &"x".repeat(64)),
+    ] {
+        assert_eq!(
+            raw.read_telemetry(request(input)).await.unwrap_err().code(),
+            Code::NotFound
+        );
+    }
+    assert_eq!(
+        raw.read_telemetry(request(telemetry_request(
+            "core-1",
+            "synthetic-unavailable"
+        )))
+        .await
+        .unwrap_err()
+        .code(),
+        Code::Unavailable
+    );
+    assert_eq!(
+        raw.read_telemetry(request(telemetry_request("core-0", &"x".repeat(5000))))
+            .await
+            .unwrap_err()
+            .code(),
+        Code::ResourceExhausted
+    );
+    assert_eq!(
+        raw.apply_command(request(ActuatorCommand {
+            command_id: vec![3; 16],
+            target: telemetry_request("core-0", "synthetic-temperature").target,
+            desired_state: MicroState::LowPower as i32,
+            expected_state: Some(MicroStateSnapshot {
+                state: MicroState::Active as i32,
+                revision: Some(0),
+                instance_id: instance_id.clone(),
+            }),
+        }))
+        .await
+        .unwrap_err()
+        .code(),
+        Code::Unimplemented
+    );
+    let barrier = std::sync::Arc::new(tokio::sync::Barrier::new(33));
+    let mut readers = Vec::new();
+    for index in 0..32 {
+        let mut reader = raw.clone();
+        let barrier = barrier.clone();
+        let expected_id = instance_id.clone();
+        readers.push(tokio::spawn(async move {
+            barrier.wait().await;
+            for _ in 0..10 {
+                let (component, sensor, value, unit) = fixtures[index % fixtures.len()];
+                let sample = reader
+                    .read_telemetry(request(telemetry_request(component, sensor)))
+                    .await
+                    .unwrap()
+                    .into_inner();
+                assert_eq!(sample.target.as_ref().unwrap().component_id, component);
+                assert_eq!(sample.value, Some(value));
+                assert_eq!(sample.unit, unit as i32);
+                let state = sample.observed_state.unwrap();
+                assert_eq!(state.state, MicroState::Active as i32);
+                assert_eq!(state.revision, Some(0));
+                assert_eq!(state.instance_id, expected_id);
+            }
+        }));
+    }
+    barrier.wait().await;
+    // Register writes have their own authority and cannot advance Micro-State.
+    registers
+        .compare_write(address(4, 3), 34, 33)
+        .await
+        .unwrap();
+    for reader in readers {
+        reader.await.unwrap();
+    }
+    for (offset, width, value) in [(0, 1, 11), (2, 2, 22), (4, 3, 34), (8, 4, 44), (16, 3, 1)] {
+        assert_eq!(registers.read(address(offset, width)).await.unwrap(), value);
+    }
+    let final_sample = raw
+        .read_telemetry(request(telemetry_request(
+            "core-0",
+            "synthetic-temperature",
+        )))
+        .await
+        .unwrap()
+        .into_inner();
+    assert_eq!(
+        final_sample.observed_state.unwrap(),
+        MicroStateSnapshot {
+            state: MicroState::Active as i32,
+            revision: Some(0),
+            instance_id: instance_id.clone(),
+        }
+    );
+    drop(raw);
+    drop(registers);
+    drop(server);
+    let (_restarted, endpoint) = start_server();
+    let mut restarted = HardwareActuatorClient::connect(endpoint).await.unwrap();
+    let state = restarted
+        .read_telemetry(request(telemetry_request(
+            "core-0",
+            "synthetic-temperature",
+        )))
+        .await
+        .unwrap()
+        .into_inner()
+        .observed_state
+        .unwrap();
+    assert_eq!(state.revision, Some(0));
+    assert_eq!(state.state, MicroState::Active as i32);
+    assert_eq!(state.instance_id.len(), 16);
+    assert_ne!(state.instance_id, instance_id);
 }

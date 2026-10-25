@@ -9,8 +9,9 @@ package permanexus.actuator.v1;
 service HardwareActuator {
   rpc ReadRegister(ReadRegisterRequest) returns (ReadRegisterResponse);
   rpc WriteRegister(WriteRegisterRequest) returns (WriteRegisterResponse);
-  // Contract scaffolding: the current simulator returns UNIMPLEMENTED.
+  // Read-only deterministic synthetic fixtures in the RAM simulator.
   rpc ReadTelemetry(TelemetryRequest) returns (TelemetryData);
+  // Contract scaffolding: the current simulator returns UNIMPLEMENTED.
   rpc ApplyCommand(ActuatorCommand) returns (ActuatorCommandResult);
 }
 
