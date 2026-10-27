@@ -31,14 +31,7 @@ constexpr std::array<SensorSpec, 4> sensors{{
 }  // namespace
 
 bool valid_telemetry_id(std::string_view id) {
-    if (id.empty() || id.size() > 64) { return false; }
-    for (unsigned char character : id) {
-        if (!((character >= 'A' && character <= 'Z') ||
-              (character >= 'a' && character <= 'z') ||
-              (character >= '0' && character <= '9') ||
-              character == '_' || character == '.' || character == '-')) { return false; }
-    }
-    return true;
+    return valid_component_id(id);
 }
 
 bool valid_synthetic_sample(const SyntheticSample& sample, int configured_unit) {
@@ -49,12 +42,10 @@ bool valid_synthetic_sample(const SyntheticSample& sample, int configured_unit) 
          (*sample.value >= 0.0 && *sample.value <= 1.0));
 }
 
-TelemetryStore::TelemetryStore(const InstanceId& instance_id)
-    : states_{{{ {}, {wire::MICRO_STATE_ACTIVE, 0, instance_id}},
-               { {}, {wire::MICRO_STATE_ACTIVE, 0, instance_id}}}} {}
+TelemetryStore::TelemetryStore(const MicroStateStore& state_store)
+    : state_store_(state_store) {}
 
 TelemetryResult TelemetryStore::read(const wire::TelemetryRequest& request) const {
-    static_assert(std::tuple_size<decltype(states_)>::value == components.size());
     if (!request.has_target() || !valid_telemetry_id(request.target().device_id()) ||
         !valid_telemetry_id(request.target().component_id()) ||
         !valid_telemetry_id(request.sensor_id())) {
@@ -69,12 +60,9 @@ TelemetryResult TelemetryStore::read(const wire::TelemetryRequest& request) cons
             if (!valid_synthetic_sample(sensor.sample, sensor.configured_unit)) {
                 return {TelemetryStatus::unavailable, {}};
             }
-            const auto snapshot = [&] {
-                const std::lock_guard<std::mutex> lock(states_[index].mutex);
-                return states_[index].snapshot;
-            }();
-            if (!wire::MicroState_IsValid(snapshot.state) ||
-                snapshot.state == wire::MICRO_STATE_UNSPECIFIED) {
+            const auto snapshot = state_store_.snapshot(component.device, component.component);
+            if (!snapshot || !wire::MicroState_IsValid(snapshot->state) ||
+                snapshot->state == wire::MICRO_STATE_UNSPECIFIED) {
                 return {TelemetryStatus::unavailable, {}};
             }
             wire::TelemetryData data;
@@ -85,9 +73,9 @@ TelemetryResult TelemetryStore::read(const wire::TelemetryRequest& request) cons
             data.set_unit(static_cast<wire::TelemetryUnit>(sensor.sample.unit));
             data.set_sampled_at_unix_ns(*sensor.sample.sampled_at_unix_ns);
             auto* state = data.mutable_observed_state();
-            state->set_state(static_cast<wire::MicroState>(snapshot.state));
-            state->set_revision(snapshot.revision);
-            state->set_instance_id(snapshot.instance_id.data(), snapshot.instance_id.size());
+            state->set_state(snapshot->state);
+            state->set_revision(snapshot->revision);
+            state->set_instance_id(snapshot->instance_id.data(), snapshot->instance_id.size());
             return {TelemetryStatus::ok, std::move(data)};
         }
         return {TelemetryStatus::not_found, {}};

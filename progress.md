@@ -1,5 +1,149 @@
 # Daily progress
 
+## 2026-10-27 — P001 final diff review and publication
+
+Plan/acceptance criteria: diagnose why sandboxed `git diff` commands failed while status and rev-parse worked; review all current P001 tracked and new paths; verify security boundaries and `git diff --check`; then stage only the reviewed paths and publish with a normal commit/push. Do not rerun tests unless review identifies a concrete defect.
+
+Git diagnosis: `git status`, branch inspection, and `rev-parse` identify a valid non-bare worktree at `D:/code-project/PermaNexus`, branch `main`, with `.git/index` present and no `core.worktree` override. In the default sandbox, `git diff --stat`, `git diff --check`, explicit `-C`, explicit `--work-tree`, and a command-scoped `safe.directory` all fail with `fatal: this operation must be run in a work tree`. The same read-only probes succeed through scoped elevated execution. This isolates the failure to the sandboxed Git invocation context; no repository data, Git configuration, or index was modified to work around it.
+
+Review result: reviewed all 13 modified tracked paths and three new Micro-State paths. The change set is limited to the P001 implementation, related contract/feature/status records, and Rust gRPC coverage; no unrelated or ignored build/runtime paths are included. C++ keeps the explicit two-component allowlist, approved transition/status order, per-component mutex and coherent snapshots, precommit cancellation check, and no-mutation rejections. The Rust wrapper makes one RPC call with the existing two-second deadline and no retries. RegisterBank and the Rust wear planner remain independent; no protobuf schema/field change, MMIO/hardware access, network exposure, production fault injection, caller-authentication assertion, or exactly-once claim was added. Post-commit response loss and deadline expiry remain unverified. `git diff --check` passed with the working elevated Git context. No code defect requiring a test rerun was found; Phase 3A checks were not rerun.
+
+Publication preparation: initial staged set was empty. Only the 16 reviewed P001 paths are authorized for explicit staging. No force push or history rewrite is permitted. P001 remains in progress because ambiguous transport outcomes are not verified.
+
+Usage: opening Codex metrics were 2% weekly / 10% five-hour; final observation was 2% weekly / 11% five-hour with reset timestamps unchanged at 1793608708 / 1793072490. This mid-day, account-wide baseline cannot establish earlier daily usage or exclusive attribution; other providers are unavailable. No 14-point daily cap event is established.
+
+## 2026-10-27 — P001 Phase 3A owner review preparation
+
+Plan/acceptance criteria: inspect the SWE Phase 3A result, compare its claims with the current project records and implementation, preserve all contributor work, and prepare a clear next step. Do not stage or publish during this review.
+
+Completed: confirmed `main` tracks `origin/main` and HEAD remains `dacd472`; 13 tracked files and three new Micro-State files remain modified/untracked for the uncommitted P001 implementation. Reviewed the Micro-State store, its C++ tests, the Rust command integration test reference, and the P001 status records. SWE reports `mingw32-make check test test-grpc` passed, CTest 5/5, ordinary Rust 22/22 (three integration tests ignored by that invocation and run separately), gRPC 3/3, Release builds passed, and HPP CTest 4/4 plus the documented benchmark command passed. The detailed commands/results are in the immediately following Phase 3A entry. Those runs were not repeated in this review.
+
+Corrected stale P001 phase-gate statements in `feature.md` and `proto/README.md`: Phase 3A verification is complete; owner and publication review remain. No runtime/source changes were made in this review. No files were staged, committed, or pushed.
+
+Review limitation: `git status`, `git rev-parse --is-inside-work-tree`, and `git rev-parse --show-toplevel` work, but each attempted `git diff`, including `git diff --check` and `--stat`, fails with `fatal: this operation must be run in a work tree`. Therefore this review could not verify the complete tracked diff or whitespace check. Preserve that failure and resolve the Git invocation/worktree issue before staging or publication. No tests were run again because this turn focused on reviewing the recorded Phase 3A evidence and code; no new executable change was made.
+
+Usage observation during this review: Codex reports 2% weekly and 11% five-hour; the latest available earlier same-day observation was 2% weekly / 10% five-hour. This is rounded shared-account data and cannot establish earlier Bangkok-day use, exact consumption, or other-provider usage. No 14-point daily cap event is established.
+
+## 2026-10-27 — P001 Phase 3A verification
+
+Plan/acceptance criteria: run the Windows `check test test-grpc` target using the existing isolated dependency prefix and run the documented HPP CTest/benchmark target. Preserve the current Phase 1/2 working tree; do not start cleanup or publication. Record actual pass/ignore/failure results and retain the unverified transport-loss/deadline limitation.
+
+Completed: `mingw32-make check test test-grpc` completed with exit code 0. Rust formatting and `cargo check --locked` passed. The actuator Release build passed; CTest passed 5/5 (`register_bank_test`, `hpp_test`, `telemetry_store_test`, `micro_state_store_test`, `actuator_service_test`). Ordinary Cargo tests passed 22/22; three gRPC contract tests were intentionally ignored in that invocation and run separately by `test-grpc`, where all 3/3 passed, including the targeted ApplyCommand test (1/1). Release Rust build passed. No tests failed or were blocked.
+
+The documented HPP command `mingw32-make benchmark-hpp 'CMAKE_FLAGS=-G "MinGW Makefiles"' BENCHMARK_ITERATIONS=100000 BENCHMARK_THREADS=4` completed with exit code 0. HPP CTest passed 4/4 (`register_bank_test`, `hpp_test`, `hpp_benchmark_smoke`, `hpp_benchmark_invalid`). Benchmark smoke checksums matched: atomic/mutex single-thread `5999950000`, contended `100000`, validated bank `4999950000`. The requested benchmark also ran (100000 iterations, 4 threads); observed ns/op were atomic single 5.596, mutex single 14.297, atomic contended 57.016, mutex contended 62.948, validated bank 17.415. These are one-run timings, not correctness or performance guarantees.
+
+Environment: used existing `build/msys-prefix/ucrt64`, MSYS2 UCRT64 binaries, and `protoc.exe`; no package or dependency changes. The test process required scoped permission to run loopback integration. The full set did not induce a deadline expiry or simulate a lost response after commit; no deterministic isolated drop mechanism was already available, no production fault injection was added, and those behaviors remain unverified. Do not infer non-commit from transport failure or add retries. The server remains loopback-only and unauthenticated; wear planner and registers remain independent from Micro-State.
+
+No source, schema, or runtime journal changes were made by verification. Existing Phase 1/2 changes were preserved. No files were staged, committed, or pushed. P001 remains in progress; stop for owner review before any further verification or cleanup.
+
+Usage: opening Codex observation was 2% weekly / 8% five-hour; closing observation was 2% weekly / 10% five-hour with reset timestamps 1793608708 / 1793072490. This mid-day account-wide baseline cannot establish earlier Bangkok-day use; other providers and exclusive attribution are unavailable. The rounded weekly value did not increase in this interval, and no daily 14-point cap event is established.
+
+## 2026-10-27 — P001 Phase 2 Rust/gRPC integration
+
+Plan/acceptance criteria: add a one-shot Rust `apply_command` method with the existing two-second deadline; extend real C++/Rust gRPC coverage for approved transitions, snapshots, statuses, concurrency, per-component and register independence, loopback, and message bounds. Keep schema, Phase 1 implementation, register/planner ownership, and retry policy unchanged. Do not start Phase 3 full verification. Assess deterministic lost-response testing without production fault injection; document a gap if unsafe or infeasible.
+
+Completed: added `ActuatorClient::apply_command`, which builds one tonic request, applies `RPC_TIMEOUT` (two seconds), calls `apply_command` once, and returns the decoded result/status without retry logic. Added one ignored-by-default real integration test using the existing C++ server process and Rust client. Its 12-step sequence for each component covers all nine transition-table cells, same-state revision increments, result command/target and coherent previous/current snapshots, malformed/unknown requests, instance/state/revision status precedence, denied-transition no-mutation, 32 concurrent requests on one snapshot with exactly one winner, component isolation, unchanged four writable plus one read-only register, loopback address, and 4096-byte receive bound (`RESOURCE_EXHAUSTED` for an oversized command). No Rust wear-planner code, protobuf fields, C++ runtime behavior, dependencies, or `Cargo.lock` changed. Updated README, feature, protocol, progress, and handoff records; P001 remains in progress.
+
+Focused command (Windows, existing isolated dependencies and Phase 1 C++ server build):
+
+```powershell
+$dependencyPrefix = (Join-Path (Get-Location) 'build/msys-prefix/ucrt64').Replace('\', '/')
+$env:PATH = "$dependencyPrefix/bin;C:\msys64\ucrt64\bin;$env:PATH"
+$env:PROTOC = "$dependencyPrefix/bin/protoc.exe"
+$env:PERMANEXUS_ACTUATOR_PATH_FILE = (Join-Path (Get-Location) 'build/actuator/server_path-Release.txt')
+cargo test --locked --manifest-path src/layer2_permacore/Cargo.toml --test grpc_contract apply_command_obeys_ram_policy_preconditions_and_rpc_isolation -- --ignored --exact --nocapture
+```
+
+Result: after the sandbox denied loopback sockets, reran this exact test with scoped elevated permission; it passed 1/1 in 0.10 seconds (two other integration cases filtered out). The first permitted run failed because the test helper requested the temperature fixture for `core-1`; changed it to use that component's voltage fixture, then reran and passed. An initial sandboxed rustfmt check could not canonicalize the workspace; elevated formatting showed style-only diffs, `cargo fmt` applied them, and the final integration compile/test passed. Warnings from the first compile only concerned incremental-cache hard-link fallback; no source/dependency change was needed.
+
+Limits: the new method visibly sets the existing two-second timeout, but no expiry was induced. The integration asserts the server's announced loopback address and message-limit behavior. Source inspection shows one unary RPC call site and no retry loop; no injected transport failure was run to count client retries. A deterministic disconnect after server commit is not feasible with the current production server without a dedicated test-only faulting transport/server. No such harness or production fault injection was added. Thus actual lost-response behavior and runtime retry behavior after a socket disconnect remain unverified; clients must continue to treat post-dispatch transport errors as unknown. The wear planner remains separate and was not directly observable in this RPC test. No C++ suite, other integration tests, Cargo unit suite, or full Phase 3 checks were run.
+
+All observed test/tooling issues were corrected. No environment packages, credentials, or dependency lockfiles changed. No files were staged, committed, or pushed; the Phase 1 files and documentation edits present at session start are preserved.
+
+Usage: opening Codex metrics showed 1% weekly / 7% five-hour; final observation showed 2% weekly / 8% five-hour with unchanged resets 1793608708 / 1793072490. This mid-day/account-wide baseline cannot establish earlier Bangkok-day use; other providers and exclusive attribution are unavailable. The observed one-point weekly increase is below the 14-point daily cap; no daily cap event is established.
+
+Next: stop for Phase 2 review. Phase 3 full required verification, final complete diff review, and publication remain pending a separate owner request. Before any command is treated as reliable across transport loss, determine whether an isolated deterministic test-only drop harness can be added without production behavior changes; do not claim exactly-once behavior.
+
+## 2026-10-27 — Independent Phase 2 review
+
+Plan and acceptance criteria: inspect the one-shot Rust client method and targeted gRPC integration coverage; rerun the exact test through the loopback simulator; check formatting and docs; update the handoff for the next phase without beginning full verification.
+
+Review result: implementation uses one unary call with the existing two-second timeout and has no retry logic. The targeted integration test passed independently: 1/1, with two unrelated ignored integration tests filtered out. It verifies the approved table for both components, same-state revision increments, status/precondition precedence, result snapshots, unknown/malformed commands, 32 concurrent requests with one winner and 31 stale failures, component/register isolation, loopback, and message-size rejection. No source defect found in the inspected Phase 2 path. A post-commit lost response and induced deadline were not tested; this remains explicitly documented. `cargo fmt --check` could not run because Rust tooling could not canonicalize the restricted workspace path (`Access is denied`); SWE records that formatting was applied after its own format check was sandbox-blocked. `git diff --check` also remains blocked by Git's “must be run in a work tree” error despite successful `git status`. No full test suite, commit, or push was run.
+
+Usage: opening Codex metrics for this review were 2% weekly / 8% five-hour; final observation was 2% weekly / 10% five-hour with unchanged reset timestamps. This account-wide baseline cannot establish earlier usage today; other provider metrics and exact shared-account attribution are unavailable. The rounded readings do not establish the 14-point daily cap.
+
+Next: Phase 3 full C++/Rust checks and final diff review. Preserve the documented transport-loss limitation unless a production-neutral deterministic test seam is feasible. Keep P001 in progress until full verification and publication review are complete.
+
+## 2026-10-27 — P001 Phase 1 C++ ApplyCommand
+
+Plan/acceptance criteria: implement the owner-approved command policy in the C++ RAM simulator only. Preserve the protobuf schema, loopback-only unauthenticated server, separate Micro-State/register/planner ownership, and unknown-outcome/no-retry rules. Add focused C++ tests for the full table, validation/status order, atomic snapshots, exhaustion, cancellation before commit, per-component isolation, rejection/no-mutation, and same-snapshot contention. Stop before Rust/gRPC integration and full verification.
+
+Completed: added `MicroStateStore` with a separate per-component mutex and mutable in-memory snapshot; connected `TelemetryStore` to this shared snapshot authority; implemented the C++ `ApplyCommand` status mapping and precommit cancellation check. The two allowlisted simulated components use the approved table. Validation checks presence, ID syntax/length, 16-byte command and instance IDs, enums, and expected revision. Under lock the implementation checks instance, state/revision, transition permission, and revision exhaustion; it prepares the response snapshot, checks cancellation immediately before commit, then mutates state. Successful results contain coherent previous/current snapshots and increment revision exactly once. RegisterBank, wear planner, protobuf schema, server binding, message limits, and retry behavior were not changed. Updated README/protocol/feature/handoff records; P001 remains in progress and Phase 2 is pending review.
+
+Focused verification on Windows using the existing dependency prefix:
+
+```powershell
+$dependencyPrefix = (Join-Path (Get-Location) 'build/msys-prefix/ucrt64').Replace('\', '/')
+$env:PATH = "$dependencyPrefix/bin;C:\msys64\ucrt64\bin;$env:PATH"
+cmake -S src/layer1_actuator -B build/actuator -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$dependencyPrefix
+cmake --build build/actuator --config Release --target micro_state_store_test actuator_service_test telemetry_store_test --parallel 4
+ctest --test-dir build/actuator -C Release -R "^(micro_state_store_test|actuator_service_test|telemetry_store_test)$" --output-on-failure
+```
+
+Result: the focused build passed; CTest passed 3/3 (`telemetry_store_test`, `micro_state_store_test`, `actuator_service_test`). Backend coverage exercised all nine transitions for each component, same-state increments, invalid/missing values and enums, unknown targets, expected snapshot mismatches, status precedence, revision exhaustion, no-mutation failures, coherent success results, independent component snapshots, cancellation callback, and 32 contenders sharing one expected snapshot with exactly one winner. Service checks covered canonical command statuses and confirmed a register sentinel remained unchanged. No Rust tests, real gRPC/Rust integration, full verification, or transport-loss/cancellation tests were run.
+
+## 2026-10-27 — Independent Phase 1 review and Phase 2 preparation
+
+Plan and acceptance criteria: review SWE's changed C++ implementation and tests against the approved table; rebuild the server and rerun focused CTest targets; correct stale status documentation; set a bounded Phase 2 handoff. Do not change runtime behavior or begin Phase 2.
+
+Review result: no runtime defect found in the inspected Phase 1 path. Independent CMake configure/build succeeded for `micro_state_store_test`, `actuator_service_test`, and `telemetry_store_test`; selected CTest passed 3/3. The `actuator_server` target also built successfully. Source review confirmed validation/status precedence, atomic per-component locking, revision increments, cancellation check before commit, no-mutation rejection paths, and no register/planner mapping. Updated stale protocol documentation that still described snapshots as immutable and said no transition API existed. Phase 2 real transport/Rust behavior and ambiguous response tests remain unverified. `git diff --check` remains blocked by Git reporting “must be run in a work tree” despite successful status/rev-parse; SWE's own Phase 1 record reports an earlier diff check passed. No commit or push.
+
+Usage: opening Codex observation for this review was 1% weekly / 2% five-hour; an intermediate observation was 1% / 5%, and the final observation after documentation review was 1% weekly / 6% five-hour with unchanged reset timestamps. These account-wide rounded readings do not establish full-day use or exclusive attribution. Other providers are unavailable; no evidence of reaching the 14-point daily cap.
+
+Next: Phase 2 gRPC/Rust tests only, in a separate bounded SWE task. Validate transport concurrency, component isolation, deadlines, register/planner independence, and unknown outcomes without retries. Then stop for review before Phase 3 full checks/publication.
+
+Final review: `git diff --check` passed; the edited Markdown is English, and `proto/actuator.proto` has no diff. All P001 and pre-existing contributor documentation changes remain unstaged; no commit or push was made. The 14-point daily threshold is not established by the available account-wide metrics.
+
+Mistakes/fixes: the first build invocation used the existing generated Makefiles before reconfiguring, so CMake had no rule for the newly added target; explicitly configured the existing build directory and rebuilt. The first CTest invocation omitted the dependency prefix from `PATH` (two executables exited `0xc0000135`; the service target timed out); reran with the documented prefix and all focused tests passed. A direct `ServerContext::TryCancel()` test outside an active RPC logged that cancellation failed and did not model transport cancellation; removed that invalid test and tested the store's precommit cancellation callback deterministically. Real RPC cancellation/unknown outcomes remain Phase 2 work.
+
+Usage: opening Codex account metrics for this implementation session showed 1% weekly and 3% five-hour; final observation showed 1% weekly and 5% five-hour with unchanged resets 1793608708 / 1793072490. The rounded weekly reading was unchanged during this interval. These account-wide observations do not establish earlier Bangkok-day use or exclusive chat attribution; other provider metrics are unavailable. No 14-point daily halt threshold is established.
+
+Next: stop for Phase 1 review. Only after a separate request, add Phase 2 real gRPC/Rust integration coverage for transport concurrency, deadlines, component and planner independence, and unknown outcomes. Do not mark P001 complete before Phase 3 full verification and review.
+
+## 2026-10-27 — P001 ApplyCommand architecture review
+
+Plan/acceptance criteria: review the current command schema and C++ service boundary; propose explicit independent policies for `simulated-0/core-0` and `simulated-0/core-1`, including same-state commands, permissions, revision exhaustion, instance mismatch, concurrency, cancellation, and unknown outcomes; record implementation gates in English; preserve `ApplyCommand` as `UNIMPLEMENTED`. Do not change protobuf/runtime behavior, run tests, commit, or push.
+
+Completed: inspected the required project guidance and status, current commit `dacd472009bca6b874ffb3b615dd97c64ea8a7c5`, protocol contract, telemetry backend, and C++ service. The worktree was clean at start. Added a simulator-only transition/access proposal, atomic validation/commit order, cancellation and ambiguity semantics, owner decision questions, and concrete implementation acceptance criteria to `proto/README.md`; updated this record and `handoff.md`. No code, protobuf, feature status, or runtime behavior changed. `ApplyCommand` remains `UNIMPLEMENTED`. Registers and wear-planner slots remain independent. No mistakes or environment changes occurred.
+
+Verification: documentation/code review only; no tests were run, as requested. Reviewed the three-file diff and `git diff --check` passed. No files are staged; no commit or push was performed.
+
+Usage: opening Codex account observation at 07:39 Bangkok showed 0% weekly (7-day reset timestamp 1793608708) and 1% five-hour (reset timestamp 1793072490). Closing observation showed 1% weekly and 2% five-hour with the same reset timestamps. The displayed weekly increase is one percentage point during this interval, not an exact daily or exclusive-chat total. This mid-day opening cannot establish earlier usage on 2026-10-27; other provider/account metrics and earlier shared-account attribution are unavailable. The evidence does not establish that the 14-point halt threshold was reached; do not infer an exact daily total from rounded/account-wide values.
+
+Owner decision required before implementation: approve or revise each per-component transition row, same-state revision behavior, local unauthenticated-loopback access boundary, and validation/status precedence. Next: obtain those decisions; only then implement the approved RAM-only policy and run its specified C++/Rust integration checks.
+
+## 2026-10-27 — SWE P001 review
+
+Plan and acceptance criteria: inspect the SWE-authored P001 proposal and current repository state; distinguish design work from runtime implementation; identify contract/security issues; preserve all existing work and prepare the next owner decision gate.
+
+Findings: SWE completed a documentation-only ApplyCommand policy proposal in `proto/README.md`; no ApplyCommand code was enabled, and `ApplyCommand` remains `UNIMPLEMENTED`. The proposed state table is simulator-only and expressly disclaims hardware semantics. Reviewer correction recorded: same-state revision increments are already required by the published contract, so treat them as fixed unless a separate schema/semantics change is approved. Also recommend checking expected instance/state/revision before state-dependent transition permission, so stale requests receive canonical mismatch statuses rather than policy-dependent outcomes. Owner approval remains required for per-component transition edges and whether unauthenticated local loopback mutation is acceptable for this RAM-only simulator.
+
+Repository state: HEAD is `dacd472009bca6b874ffb3b615dd97c64ea8a7c5`; `git status` shows only SWE's `handoff.md`, `progress.md`, and `proto/README.md` changes. No source changes are pending. The local `origin/main` tracking ref equals HEAD, but remote reachability could not be confirmed in the prior check due DNS failure. `git diff --check` failed in this review with Git reporting “must be run in a work tree,” although `git status` and `git rev-parse` work; the SWE progress entry reports its earlier diff check passed. No tests were run because this was a documentation review. No commit/push performed.
+
+Usage: opening account metrics were 0% weekly / 1% five-hour; closing metrics were 1% weekly / 2% five-hour with reset timestamps unchanged. Account-wide rounded values do not establish full-day or exclusive-chat usage; other providers are unavailable and the 14-point daily cap is not established.
+
+Next: owner decides the transition table for both simulated components and the local unauthenticated mutation boundary. Then implement only the approved RAM-only policy, preserving all contract-mandated revision and error semantics and running the documented C++/Rust concurrency and integration checks.
+
+## 2026-10-27 — Owner-approved ApplyCommand scope and SWE breakdown
+
+Plan and acceptance criteria: record the owner's approval of the existing simulator-only transition table and prepare bounded implementation phases. Preserve the contract's same-state revision increment, separate RAM state, current loopback-only boundary, and unknown-outcome behavior. Keep each SWE phase independently reviewable and stop for review between phases.
+
+Completed: recorded owner approval for the same table on both simulated components; moved P001 to planned implementation; documented validation precedence and the existing unauthenticated local-process boundary. The approved transition exception is `LOW_POWER -> IDLE`, which remains denied and must proceed through `ACTIVE`. No code or runtime behavior changed. Prepared three phases: C++ handler/unit coverage; real gRPC/Rust concurrency and transport outcomes; then full verification and documentation/publication review.
+
+Usage: opening Codex metrics at this session's start showed 1% weekly and 2% five-hour usage; closing observation showed 1% weekly / 3% five-hour with unchanged reset timestamps. These account-wide rounded values do not establish earlier daily usage or exclusive session attribution. Other provider metrics are unavailable; the daily 14-point halt threshold is not established.
+
+Next: assign SWE only Phase 1. Review the handler and C++ tests before authorizing Phase 2. No tests were run in this planning/documentation session; no source, commit, or push was produced.
+
 ## 2026-10-25 — Owner-authorized telemetry publication
 
 Plan/acceptance criteria: review the staged telemetry implementation and pending architecture/budget documentation, preserve contributor content, verify origin/main and whitespace, stage explicit paths, commit, push normally, and confirm local/remote commit equality.

@@ -34,7 +34,8 @@ int main() {
     const auto os_id = generate_instance_id();
     require(os_id.has_value(), "OS random source unavailable in test environment");
     const InstanceId id{{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 255}};
-    const TelemetryStore store(id);
+    const MicroStateStore state_store(id);
+    const TelemetryStore store(state_store);
     const std::string expected_id(reinterpret_cast<const char*>(id.data()), id.size());
     const auto sample = store.read(request());
     require(sample.status == TelemetryStatus::ok, "Synthetic sample failed");

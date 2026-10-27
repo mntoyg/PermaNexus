@@ -25,11 +25,42 @@ permanexus::RegisterAddress convert(const permanexus::actuator::v1::RegisterAddr
     return {address.device_id(), address.offset_bytes(), static_cast<int>(address.width())};
 }
 
+bool request_cancelled(void* context) noexcept {
+    return static_cast<grpc::ServerContext*>(context)->IsCancelled();
+}
+
 class ActuatorService final : public permanexus::actuator::v1::HardwareActuator::Service {
 public:
-    explicit ActuatorService(const permanexus::InstanceId& instance_id) : telemetry_(instance_id) {}
+    explicit ActuatorService(const permanexus::InstanceId& instance_id)
+        : micro_state_(instance_id), telemetry_(micro_state_) {}
 
 private:
+    grpc::Status ApplyCommand(grpc::ServerContext* context,
+                              const permanexus::actuator::v1::ActuatorCommand* request,
+                              permanexus::actuator::v1::ActuatorCommandResult* response) override {
+        const auto result = micro_state_.apply(*request, request_cancelled, context);
+        using permanexus::CommandStatus;
+        switch (result.status) {
+            case CommandStatus::ok:
+                *response = result.result;
+                return grpc::Status::OK;
+            case CommandStatus::invalid_argument:
+                return {grpc::StatusCode::INVALID_ARGUMENT, "Invalid actuator command"};
+            case CommandStatus::not_found:
+                return {grpc::StatusCode::NOT_FOUND, "Unknown simulated component"};
+            case CommandStatus::permission_denied:
+                return {grpc::StatusCode::PERMISSION_DENIED, "Transition denied by simulator policy"};
+            case CommandStatus::aborted:
+                return {grpc::StatusCode::ABORTED, "Expected Micro-State snapshot did not match"};
+            case CommandStatus::failed_precondition:
+                return {grpc::StatusCode::FAILED_PRECONDITION,
+                        "Instance mismatch or Micro-State revision exhausted"};
+            case CommandStatus::cancelled:
+                return {grpc::StatusCode::CANCELLED, "Request cancelled before command commit"};
+        }
+        return {grpc::StatusCode::INTERNAL, "Unexpected command status"};
+    }
+
     grpc::Status ReadTelemetry(grpc::ServerContext* context,
                               const permanexus::actuator::v1::TelemetryRequest* request,
                               permanexus::actuator::v1::TelemetryData* response) override {
@@ -86,6 +117,7 @@ private:
     }
 
     permanexus::RegisterBank bank_;
+    permanexus::MicroStateStore micro_state_;
     const permanexus::TelemetryStore telemetry_;
 };
 

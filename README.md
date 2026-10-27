@@ -6,9 +6,9 @@ PermaNexus explores a polyglot architecture for extending hardware service life.
 
 | Directory | Language | Responsibility | Current status |
 | --- | --- | --- | --- |
-| `proto/` | Protocol Buffers | Shared versioned contracts | Register transactions and synthetic read-only telemetry; command contract scaffolding |
+| `proto/` | Protocol Buffers | Shared versioned contracts | Register transactions, synthetic read-only telemetry, and RAM-only command simulation |
 | `src/layer1_actuator/` | C++ / Assembly | Hardware access and low-latency actuation | HPP atomic RAM simulator and benchmarks; no MMIO |
-| `src/layer2_permacore/` | Rust | Memory safety and wear-leveling | Safe gRPC client, journaled write-budget planner, and demos |
+| `src/layer2_permacore/` | Rust | Memory safety and wear-leveling | Safe loopback gRPC client with one-shot RAM command method, journaled write-budget planner, and demos |
 | `src/layer3_omni_agent/` | Go | Concurrent orchestration | Reserved directory |
 | `src/layer4_telemetry_ai/` | Python | Predictive telemetry and AI | Reserved directory |
 
@@ -32,7 +32,7 @@ Actuator register state resets on restart. The Rust client only accepts `http://
 
 `ReadTelemetry` serves immutable allowlisted synthetic fixtures: `simulated-0/core-0` exposes `synthetic-temperature` (42.5 Celsius) and `synthetic-utilization` (0.0 ratio); `simulated-0/core-1` exposes `synthetic-voltage` (1.0 Volts) and `synthetic-unavailable` (returns `UNAVAILABLE`). These are deterministic RAM simulation values, never physical measurements; their timestamp is present epoch-zero fixture metadata.
 
-Micro-State snapshots are separate from registers and wear-planner slots: each component starts `ACTIVE` at revision zero, with a fresh OS-random 16-byte process instance ID. Randomness failure prevents startup. Direct register writes and telemetry reads cannot change these snapshots. `ApplyCommand` remains `UNIMPLEMENTED`; no transition policy or hardware executor is enabled. See [protocol contracts, fixture semantics, and review gates](proto/README.md).
+Micro-State snapshots are separate from registers and wear-planner slots: each component starts `ACTIVE` at revision zero, with a fresh OS-random 16-byte process instance ID. Randomness failure prevents startup. Direct register writes and telemetry reads cannot change these snapshots. The C++ RAM simulator applies the owner-approved state table through `ApplyCommand`; commands change only in-memory Micro-State and have no hardware meaning. The Rust client exposes a one-shot command call with a two-second deadline. The server remains unauthenticated and bound to loopback, so any local process that can connect may issue commands. Client behavior after transport failure remains an unknown outcome; automatic retries and command deduplication are not implemented. See [protocol contracts, fixture semantics, and review gates](proto/README.md).
 
 ## Simulated wear-leveling policy
 

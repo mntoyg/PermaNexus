@@ -1,10 +1,8 @@
 #pragma once
 
 #include "actuator.pb.h"
-#include "process_instance.h"
+#include "micro_state_store.h"
 
-#include <array>
-#include <mutex>
 #include <optional>
 #include <string_view>
 
@@ -28,19 +26,10 @@ struct TelemetryResult {
 // Separate from RegisterBank and the Rust wear planner. No transition API.
 class TelemetryStore final {
 public:
-    explicit TelemetryStore(const InstanceId& instance_id);
+    explicit TelemetryStore(const MicroStateStore& state_store);
     TelemetryResult read(const actuator::v1::TelemetryRequest& request) const;
 
 private:
-    struct Snapshot {
-        int state;
-        std::uint64_t revision;
-        InstanceId instance_id;
-    };
-    struct ComponentState {
-        mutable std::mutex mutex;
-        const Snapshot snapshot;
-    };
-    const std::array<ComponentState, 2> states_;
+    const MicroStateStore& state_store_;
 };
 }  // namespace permanexus

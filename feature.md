@@ -1,12 +1,13 @@
 # PermaNexus feature inventory and roadmap
 
-Last updated: 2026-10-25, Asia/Bangkok.
+Last updated: 2026-10-27, Asia/Bangkok.
 
 This file tracks delivered capabilities and future work. Daily actions, mistakes, and usage observations belong in [progress.md](progress.md); reproduction commands and contributor context belong in [handoff.md](handoff.md). Security rules are defined in [AGENTS.md](AGENTS.md).
 
 ## Status definitions
 
 - **Implemented**: code or infrastructure exists; available verification and limits are recorded below.
+- **In progress**: an approved milestone has implementation work completed, with remaining phases and acceptance checks listed.
 - **Planned**: next work with acceptance criteria; implementation has not started.
 - **Design required**: contracts, scope, or safety decisions must be settled before implementation.
 - **Research**: a long-term direction without demonstrated feasibility or a delivery commitment.
@@ -28,7 +29,7 @@ F001-F010 were initially delivered on 2026-10-11; F011 was delivered on 2026-10-
 | F007 | HPP primitives and atomic backend | Three C++17 headers for integer bit validation, aligned owned RAM atomics, and bounded spin hints; optional atomic-link fallback. See [HPP.md](src/layer1_actuator/HPP.md). | Bit-boundary, all-width, alignment, stale-write, and concurrency checks passed on Windows x86_64 GCC. ARM/MSVC/libatomic fallback execution remains unverified. |
 | F008 | HPP benchmark | [hpp_benchmark.cpp](src/layer1_actuator/benchmarks/hpp_benchmark.cpp): bounded atomic/mutex single-thread and contended workloads, separate validated-bank workload, checksums, lock-free reporting. | Four benchmark-build CTest checks passed. Two agent-run samples and one owner-reported sample are in HPP.md. No RPC latency, energy, or lifespan measurement; lock-free does not guarantee higher throughput. |
 | F009 | Contributor rules and records | AGENTS, CLAUDE, Aider configuration, README, feature inventory, progress, and handoff. English documentation; every AI contributor follows the daily 14-percentage-point weekly-allowance cap per provider/account pool and must stop feature work and update handoff when reached. | Guidance does not enforce a sandbox or provider quota settings. Daily totals must not be invented when metrics are incomplete. |
-| F010 | Telemetry and targeted Micro-State protocol | Additive `ReadTelemetry`/`ApplyCommand` RPCs and typed telemetry/command messages. See [protocol contract](proto/README.md). | Wire presence/enum tests passed. ReadTelemetry is now implemented by F011; ApplyCommand remains `UNIMPLEMENTED`. No physical sensors, transition executor, persistent revision store, or new safe Rust wrapper. |
+| F010 | Telemetry and targeted Micro-State protocol | Additive `ReadTelemetry`/`ApplyCommand` RPCs and typed telemetry/command messages. See [protocol contract](proto/README.md). | Wire presence/enum tests passed. ReadTelemetry is implemented by F011; the C++ ApplyCommand RAM handler and one-shot Rust client method are implemented in P001 Phases 1-2. No physical sensors, hardware transition executor, persistent revision store, or wear-planner mapping. |
 | F011 | Allowlisted synthetic read-only telemetry | Immutable component/sensor fixtures, finite/unit/ID validation, separate locked per-component ACTIVE/revision-zero snapshots, OS-random 16-byte process identity with startup failure on randomness failure. No register/planner mapping. | Four C++ checks, 22 Rust tests, and two real gRPC integration tests passed; includes failure handling, 32 concurrent RPC readers, restart identity, and unchanged registers. Windows verified; Linux/macOS random paths and physical sensors unverified/out of scope. |
 
 Latest telemetry verification: four C++ checks, 22 Rust tests, and two dedicated C++/Rust integration tests passed on Windows. Ordinary Cargo deliberately ignores both transport tests before the separate run. Earlier HPP benchmark evidence remains in HPP.md; no new performance sample is claimed. Linux/macOS execution and physical power-loss durability remain unverified.
@@ -39,7 +40,7 @@ Prioritize contract review and simulation safety before hardware integration. De
 
 | ID | Status | Feature or milestone | Dependencies and acceptance criteria |
 | --- | --- | --- | --- |
-| P001 | Design required | Remaining command-stage review | Architecture review in [proto/README.md](proto/README.md) and synthetic telemetry stage F011 are complete. Micro-State remains separate from registers/planner, with loopback-only access and documented synthetic fixtures. Keep `ApplyCommand` `UNIMPLEMENTED` until a per-component transition policy/permission table is explicitly approved; future transition atomicity and unknown-outcome checks remain required. |
+| P001 | In progress — Phase 3A verified | RAM-only ApplyCommand implementation | Phase 1 C++ handler/tests, Phase 2 one-shot Rust client/targeted real C++/Rust gRPC test, Phase 3A Windows checks, and final diff/whitespace review passed as recorded in `progress.md`. Post-commit transport-loss and induced-deadline behavior remain unverified. Preserve unauthenticated loopback access, planner independence, atomic preconditions, and no-retry semantics. Hardware and external network behavior remain out of scope. |
 | P002 | Planned | HPP portability and representative measurements | Execute checks on intended platforms, including ARM/MSVC and required atomic-link fallback; gather repeated representative timing distributions before changing alignment, memory order, or defaults. |
 | P003 | Design required | Journal durability, integrity, and compaction | Review target filesystem/device flush behavior; design authenticated metadata, a trusted monotonic reference, bounded compaction, and interruption recovery preserving charges/quarantine. CRC alone is insufficient. |
 | P004 | Design required | Quarantine reconciliation | Specify authoritative evidence and auditable transitions. Unknown outcomes remain charged and quarantined until evidence supports a reviewed decision; never silently reactivate slots. |

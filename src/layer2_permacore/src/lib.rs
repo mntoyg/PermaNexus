@@ -7,7 +7,10 @@ pub mod actuator {
     tonic::include_proto!("permanexus.actuator.v1");
 }
 
-use actuator::{hardware_actuator_client::HardwareActuatorClient, RegisterAddress};
+use actuator::{
+    hardware_actuator_client::HardwareActuatorClient, ActuatorCommand, ActuatorCommandResult,
+    RegisterAddress,
+};
 use std::time::Duration;
 use tonic::transport::{Channel, Endpoint};
 use tonic::{Request, Status};
@@ -71,6 +74,16 @@ impl ActuatorClient {
             .await?
             .into_inner()
             .previous_value)
+    }
+
+    // Issue one command attempt; a transport error after dispatch leaves the outcome unknown.
+    pub async fn apply_command(
+        &mut self,
+        command: ActuatorCommand,
+    ) -> Result<ActuatorCommandResult, Status> {
+        let mut request = Request::new(command);
+        request.set_timeout(RPC_TIMEOUT);
+        Ok(self.inner.apply_command(request).await?.into_inner())
     }
 }
 
