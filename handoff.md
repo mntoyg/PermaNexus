@@ -4,7 +4,7 @@ Last updated: 2026-10-27, Asia/Bangkok.
 
 ## Context
 
-Current stage (2026-10-27): F011 synthetic read-only telemetry and P001 Phases 1-2 are implemented and independently reviewed. Phase 3A Windows checks and the final diff/whitespace review passed; details are recorded below and in `progress.md`. The Git diff error reproduces only in the sandboxed command context: explicit `-C`, `--work-tree`, and `safe.directory` do not change it, while scoped elevated read-only Git commands work. Repository metadata reports a non-bare worktree with no `core.worktree` override; no Git configuration or metadata was changed to resolve the sandbox limitation. All 16 changed P001 paths were reviewed, and the final `git diff --check` passed. Deterministic transport loss after commit and induced deadline expiry remain untested; no fault injection was added. Keep the owner-approved RAM-only policy, schema, register/wear-planner independence, and unauthenticated loopback boundary unchanged.
+Current stage (2026-10-27): F011 synthetic read-only telemetry and P001 Phases 1-2 are implemented and independently reviewed. Phase 3A Windows checks and final diff/whitespace review passed. All 16 changed P001 paths were reviewed and published in commit `93ae1c22d02425be8cb49cd99cba75431b205a96` (`Implement RAM-only ApplyCommand simulator`) to `origin/main`; remote SHA was verified and the working tree is clean. The Git diff error reproduces only in the sandboxed command context: explicit `-C`, `--work-tree`, and `safe.directory` do not change it, while scoped elevated read-only Git commands work. Repository metadata reports a non-bare worktree with no `core.worktree` override; no Git configuration or metadata was changed to resolve the sandbox limitation. Deterministic transport loss after commit and induced deadline expiry remain untested; no fault injection was added. Keep the owner-approved RAM-only policy, schema, register/wear-planner independence, and unauthenticated loopback boundary unchanged.
 
 Contributor changes were already present in AGENTS.md, feature.md, progress.md, handoff.md, and proto/README.md. Baseline copies are preserved locally in ignored `build/telemetry-baseline/`; no reset, stash, or overwrite of unrelated work was performed. The owner subsequently requested committing and publishing the completed stage, including the reviewed architecture/budget records.
 
@@ -146,7 +146,7 @@ Phase 1 implementation-session observations: Codex 1% weekly / 3% five-hour at o
 
 Phase 2 implementation-session observations: opening Codex metrics were 1% weekly / 7% five-hour; final metrics are recorded in the latest progress entry. Other providers and exact earlier daily use are unavailable.
 
-Phase 3A verification-session observations on 2026-10-27: opening Codex metrics were 2% weekly / 8% five-hour; closing metrics were 2% weekly / 10% five-hour, with reset timestamps unchanged at 1793608708 / 1793072490. See `progress.md`. This mid-day account-wide observation cannot establish prior daily use; other providers and exclusive attribution are unavailable. No daily cap event is established.
+P001 review/publication-session observations on 2026-10-27: opening Codex metrics were 2% weekly / 10% five-hour; closing metrics were 2% weekly / 12% five-hour, with reset timestamps unchanged at 1793608708 / 1793072490. See `progress.md`. This mid-day account-wide observation cannot establish prior daily use; other providers and exclusive attribution are unavailable. No daily cap event is established.
 
 ## Next tasks
 
