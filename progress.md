@@ -10,7 +10,7 @@ Review and validation: actionlint is not installed locally. PyYAML 6.0.3 parsed 
 
 Usage: opening Codex metrics showed 68% weekly / 11% five-hour; closing observation showed 68% weekly / 12% five-hour with reset timestamps unchanged at 1793774136 / 1793713045. Earlier same-day usage is unknown; these account-wide metrics do not establish total daily consumption or exclusive attribution. Other provider metrics are unavailable. No 14-point daily cap event can be inferred from this incomplete baseline.
 
-Review/publication completed: staged only `.github/workflows/linux-edge-gateway.yml`, `progress.md`, and `handoff.md`; inspected staged paths and whitespace; committed as `05e69b6` (`Add Linux edge gateway CI workflow`) and pushed normally to `origin/main`. The remote SHA matched the local commit. Hosted run `41611639097` completed successfully for that commit. This follow-up record is documentation-only and will itself trigger the workflow when pushed; verify that run separately. The pre-existing `.vscode/` directory remains untracked and excluded.
+Review/publication completed: staged only `.github/workflows/linux-edge-gateway.yml`, `progress.md`, and `handoff.md`; inspected staged paths and whitespace; committed as `05e69b6` (`Add Linux edge gateway CI workflow`) and pushed normally to `origin/main`. The remote SHA matched the local commit. Hosted run `41611639097` completed successfully for that commit. The documentation follow-up commit `9eead4d` was also pushed normally; hosted run `41612114983` completed successfully for `make check test test-grpc`. The pre-existing `.vscode/` directory remains untracked and excluded.
 
 ## 2026-11-03 — Shared embedded/Linux wear planner core
 
