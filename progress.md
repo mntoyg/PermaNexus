@@ -1,5 +1,21 @@
 # Daily progress
 
+## 2026-11-03 — Shared embedded/Linux wear planner core
+
+Plan and acceptance criteria: honor the owner's selected target classes (embedded/MCU and Linux edge gateway); implement a bounded shared planner core without hardware access; keep host filesystem persistence separated; add reproducible no_std checks to the local verification targets; inspect the project's CI/CD state; preserve all existing untracked work.
+
+Implemented: added `permanexus-wear-core`, a dependency-free Rust crate that supports `no_std` with default features disabled and accepts caller-owned fixed-capacity storage. It provides validated initialization, deterministic normalized-wear selection, exclusive charged reservations, quarantine for unresolved/unknown outcomes, evidence-based refunds, and retirement. The existing host `WearLeveler` now wraps this shared core while its filesystem journal remains in the std-based host crate. Added workspace integration and Makefile checks/tests for the no_std build and test configuration. Updated README/feature/handoff to distinguish the implemented portable core from unimplemented MCU flash adapters and target-specific support.
+
+CI/CD audit: no `.github/workflows` or other CI definition exists in the local repository. The public GitHub API returned 404 for `.github/workflows` and zero Actions workflow runs. The local verification entry point is `mingw32-make check test test-grpc` on this Windows environment. No CI workflow was created because that would introduce a recurring push/PR job and repository instructions require explicit authorization for recurring jobs. The pre-existing untracked `.vscode/` directory was left untouched and unstaged.
+
+Verification: `mingw32-make check test test-grpc` passed with exit code 0 using the existing isolated MSYS2 dependency prefix. Rust formatting and `cargo check --locked` passed; the explicit `cargo check -p permanexus-wear-core --no-default-features` passed; C++ Release build passed and CTest passed 5/5; the ordinary Rust workspace tests passed (22 root tests and 5 portable-core default-feature tests; three gRPC tests were ignored by design in that invocation); the portable core's `--no-default-features` tests passed 5/5; Rust Release build passed; real C++/Rust loopback gRPC integration passed 3/3. No tests failed in the final run.
+
+Correction: the first no_std compile failed because crate-level inner documentation comments followed a test-only `extern crate std`; moved the test declaration below the crate docs, formatted in the scoped workspace context, and reran successfully. The initial sandboxed `cargo fmt` attempt was blocked by Windows path canonicalization (`Access is denied`); the scoped elevated format/check subsequently passed.
+
+Limits: the only installed Rust target is `x86_64-pc-windows-msvc`; no MCU cross-target or Linux host run was available. Host compilation of a no_std crate does not prove a board-specific build. No GitHub CI workflow exists, so these are local checks, not a CI run. No MCU persistent-storage adapter, flash writes, logical data placement/migration, hardware access, or physical endurance claims were added. No commit or push was performed per the owner's instruction.
+
+Usage: opening Codex metrics were 67% weekly / 5% five-hour; closing observation was 67% weekly / 7% five-hour, with reset timestamps unchanged at 1793774136 / 1793713045. The account-wide mid-day baseline cannot establish earlier daily use or other-provider usage; no exact daily total or 14-point cap event is inferred.
+
 ## 2026-11-03 — Project return review and product direction
 
 Plan and acceptance criteria: re-read the required project records, verify current branch/publication status, distinguish implemented capabilities from roadmap items, and prepare a next plan around a concrete user problem without presenting research or simulation as production capability.

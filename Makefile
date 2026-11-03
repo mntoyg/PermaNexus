@@ -40,12 +40,14 @@ build-permacore:
 	$(CARGO) build --locked --release --manifest-path src/layer2_permacore/Cargo.toml
 
 check:
-	$(CARGO) fmt --manifest-path src/layer2_permacore/Cargo.toml -- --check
+	$(CARGO) fmt --manifest-path src/layer2_permacore/Cargo.toml --all -- --check
 	$(CARGO) check --locked --manifest-path src/layer2_permacore/Cargo.toml
+	$(CARGO) check --locked --manifest-path src/layer2_permacore/Cargo.toml -p permanexus-wear-core --no-default-features
 
 test: build-actuator
 	$(CTEST) --test-dir "$(BUILD_DIR)/actuator" -C $(CMAKE_CONFIG) --output-on-failure
 	$(CARGO) test --locked --manifest-path src/layer2_permacore/Cargo.toml
+	$(CARGO) test --locked --manifest-path src/layer2_permacore/Cargo.toml -p permanexus-wear-core --no-default-features
 
 test-grpc: build
 	$(CMAKE) -E env "PERMANEXUS_ACTUATOR_PATH_FILE=$(abspath $(BUILD_DIR)/actuator)/server_path-$(CMAKE_CONFIG).txt" $(CARGO) test --locked --manifest-path src/layer2_permacore/Cargo.toml --test grpc_contract -- --ignored

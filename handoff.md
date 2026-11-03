@@ -4,7 +4,7 @@ Last updated: 2026-11-03, Asia/Bangkok.
 
 ## Context
 
-Current stage (2026-11-03): F011 synthetic read-only telemetry and P001 Phases 1-2 are implemented and independently reviewed. Phase 3A Windows verification, final full-diff/whitespace review, commit, and normal publication to `origin/main` completed on 2026-10-27; see the dated records below and `progress.md`. HEAD is `a7d9a58`; the working tree was clean at the start of this planning review, which now has documentation updates in `progress.md` and `handoff.md`. P001 remains in progress because post-commit response loss and induced deadline expiry are untested; no fault injection was added. Keep the owner-approved RAM-only policy, schema, register/wear-planner independence, and unauthenticated loopback boundary unchanged.
+Current stage (2026-11-03): F011 synthetic read-only telemetry and P001 Phases 1-2 are implemented and independently reviewed. The allocator-free `no_std` wear-planner core now shares selection/reservation logic between an embedded fixed-buffer API and the existing host wrapper. Windows checks pass, but no MCU target is installed and no target-specific cross-build has run. Phase 3A P001 verification, final diff/whitespace review, commit, and normal publication to `origin/main` completed on 2026-10-27; see the dated records below and `progress.md`. P001 remains in progress because post-commit response loss and induced deadline expiry are untested; no fault injection was added. The working tree contains current implementation/documentation changes plus a pre-existing untracked `.vscode/` directory; preserve it and do not stage it. Keep the owner-approved RAM-only policy, schema, register/wear-planner independence, and unauthenticated loopback boundary unchanged.
 
 ## Recommended product direction (not yet an approved implementation target)
 
@@ -164,7 +164,7 @@ P001 review/publication-session observations on 2026-10-27: opening Codex metric
 
 ## Next tasks
 
-1. **Next planning step: confirm or revise the product hypothesis above.** Do not start P005 implementation until the initial workload and measurable requirements are selected and P003/P004 safety designs are complete. In parallel, decide how to handle the P001 unknown-outcome/deadline verification gap. No hardware/MMIO, external network exposure, automatic write retry, or exactly-once claim is authorized by this plan.
+1. **Next task: select an MCU target and persistence contract, then design P003/P004 for both target classes.** The no_std core has only been host-compiled; choose the exact architecture/toolchain before claiming embedded target support. Linux gateway persistence continues to use the separate filesystem journal. The repository has no GitHub Actions workflow and the public Actions API reports zero workflow runs; do not add a push-triggered workflow without explicit owner authorization. Keep the P001 unknown-outcome/deadline gap documented. No hardware/MMIO, external network exposure, automatic write retry, or exactly-once claim is authorized by this plan.
 2. Validate HPP portability and representative latency distributions on intended targets before changing alignment, memory order, or deployment defaults.
 3. Review journal durability on target platforms and design authenticated/monotonic metadata and compaction before hardware integration.
 4. Design evidence-based quarantine reconciliation; do not silently reconstruct quarantined slots as healthy.

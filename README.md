@@ -8,7 +8,7 @@ PermaNexus explores a polyglot architecture for extending hardware service life.
 | --- | --- | --- | --- |
 | `proto/` | Protocol Buffers | Shared versioned contracts | Register transactions, synthetic read-only telemetry, and RAM-only command simulation |
 | `src/layer1_actuator/` | C++ / Assembly | Hardware access and low-latency actuation | HPP atomic RAM simulator and benchmarks; no MMIO |
-| `src/layer2_permacore/` | Rust | Memory safety and wear-leveling | Safe loopback gRPC client with one-shot RAM command method, journaled write-budget planner, and demos |
+| `src/layer2_permacore/` | Rust | Memory safety and wear-leveling | Allocator-free `no_std` planner core for embedded callers, host journaled planner, safe loopback gRPC client, and demos |
 | `src/layer3_omni_agent/` | Go | Concurrent orchestration | Reserved directory |
 | `src/layer4_telemetry_ai/` | Python | Predictive telemetry and AI | Reserved directory |
 
@@ -39,6 +39,8 @@ Micro-State snapshots are separate from registers and wear-planner slots: each c
 The HPP layer described below accelerates local RAM primitives; it is independent of modeled storage write budgets and does not connect slots to registers.
 
 `wear_leveling::WearLeveler` is an independent, in-memory write-budget planner. It selects a healthy, non-exhausted slot with the lowest `charged_writes / write_limit` utilization, breaking ties by numeric slot ID. Exact u128 cross-products avoid floating-point rounding and u64 multiplication overflow. Selection is O(number of slots), with no allocation per reservation and at most 4096 configured slots.
+
+The shared `permanexus-wear-core` crate contains the bounded selection and reservation rules. With default features disabled it builds as `no_std` and uses no allocator: embedded callers provide a mutable fixed-capacity `SlotSnapshot` buffer. The main PermaCore crate wraps that same core for host use. The append-only filesystem journal remains a separate `std`-based host backend; an MCU persistence adapter, board support, flash driver, and logical-data migration are not implemented. Compile checks on a Windows host do not establish compatibility with a specific MCU target.
 
 Each reservation charges one write immediately and quarantines the selected slot. An exclusive Rust borrow allows one outstanding lease per planner; completing the lease consumes it so it cannot be replayed. Immutable snapshots do not allow callers to modify internal counters.
 
