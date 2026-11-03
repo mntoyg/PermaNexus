@@ -1,5 +1,17 @@
 # Daily progress
 
+## 2026-11-03 — First Linux edge-gateway CI workflow
+
+Plan/acceptance criteria: add one GitHub Actions workflow for pull requests and pushes to `main`, use a pinned Ubuntu LTS runner and minimal documented C++/Protobuf/gRPC packages from Ubuntu apt, grant read-only repository permissions, pin third-party actions by verified full SHA, and run `make check test test-grpc`. Do not add MCU jobs or edit planner source or `.vscode/`; do not commit or push.
+
+Implemented `.github/workflows/linux-edge-gateway.yml`. It runs on `ubuntu-24.04`, checks out code with `actions/checkout` v4.2.2 pinned to `11bd71901bbe5b1630ceea73d27597364c9af683` and credential persistence disabled, installs only `build-essential`, `cmake`, `libgrpc++-dev`, `libprotobuf-dev`, `protobuf-compiler`, and `protobuf-compiler-grpc` through apt, and runs the three existing Makefile targets. Workflow permissions are restricted to `contents: read`; there are no secrets, deployment steps, `pull_request_target`, or MCU-specific jobs. Rust/Cargo are supplied by the documented GitHub-hosted Ubuntu 24.04 image.
+
+Review and validation: actionlint is not installed locally. PyYAML 6.0.3 parsed the workflow and structural assertions passed for triggers, branch filter, permissions, runner, 40-character checkout SHA, credential persistence, and Makefile command. The first structural assertion used PyYAML's default YAML 1.1 resolver, which reads the GitHub Actions `on` key as a boolean; rerunning with `BaseLoader` validated the workflow structure successfully. `git diff --check` passed for tracked documentation; the workflow's whitespace was checked separately by SWE. The owner has now authorized publication; hosted Actions status is pending the push. No source, lockfile, planner, or `.vscode/` content was changed. The pre-existing untracked `.vscode/` directory is preserved and excluded. No source tests were rerun because this change adds workflow/documentation only; the prior planner verification remains recorded separately.
+
+Usage: opening Codex metrics showed 68% weekly / 11% five-hour; closing observation showed 68% weekly / 12% five-hour with reset timestamps unchanged at 1793774136 / 1793713045. Earlier same-day usage is unknown; these account-wide metrics do not establish total daily consumption or exclusive attribution. Other provider metrics are unavailable. No 14-point daily cap event can be inferred from this incomplete baseline.
+
+Review/publish plan: stage only `.github/workflows/linux-edge-gateway.yml`, `progress.md`, and `handoff.md`; inspect the staged diff, commit in English, and push normally to `origin/main` under the owner's explicit authorization. Do not stage `.vscode/`. After push, inspect the hosted Actions run and record its actual result in the next progress update; do not claim hosted CI passed until it completes successfully.
+
 ## 2026-11-03 — Shared embedded/Linux wear planner core
 
 Plan and acceptance criteria: honor the owner's selected target classes (embedded/MCU and Linux edge gateway); implement a bounded shared planner core without hardware access; keep host filesystem persistence separated; add reproducible no_std checks to the local verification targets; inspect the project's CI/CD state; preserve all existing untracked work.
@@ -443,3 +455,30 @@ Verified source: `fa1be05436e7a67dd84cb72283654ccf993d3673`. Ran `mingw32-make c
 Saved raw output in ignored `build/test-results/2026-10-11-1337-tests.log`. Tests used their isolated fixtures and an ephemeral loopback server; no hardware or `state/demo.wearlog` was touched. No source/dependency/environment changes or test failures occurred. Updated this record and handoff only; tomorrow's architect review remains the next task.
 
 Usage: 13:37 Bangkok baseline, 5% weekly / 32% five-hour (resets 1792301671 / 1791714871); 13:38 closing observation, 5% weekly / 33% five-hour (resets 1792301670 / 1791714870). Timestamp variation is recorded without asserting a reset or exact interval delta. Full-day/shared-account attribution and other-provider metrics remain unavailable; no evidence establishes the daily 14% halt threshold. Commit message: `Record requested regression and integration test results`.
+
+### 2026-11-03 — Portable wear-planner review at `4e5d3e4`
+
+Plan and acceptance criteria: review only `wear-core` and the host `wear_leveling.rs` wrapper; preserve public host API and all accounting/reservation/quarantine/refund/retirement/selection semantics; verify formatting, default and no-default core tests, and compile checks; record a P003/P004 architecture recommendation. No `.vscode/`, CI, journal, dependencies, or hardware code changes.
+
+Review outcome: no code change was justified. The core remains `no_std` when `std` is disabled, forbids unsafe code, performs no allocation in the library path, and mutates only caller-provided bounded storage (up to `MAX_SLOTS`). The host wrapper retains its existing `Vec` API and delegates selection/reservation operations to the core. Existing logic and tests cover deterministic normalized utilization with slot-ID tie-break, charge-before-lease, exclusive lease borrowing, proof-only refunds, unknown/drop quarantine, and retirement. No behavior or public API change was made.
+
+Architecture recommendation for P003/P004:
+
+- Keep the shared contract in the portable planner core: validated bounded slot snapshots/configuration, deterministic selection, reservation accounting, completion outcomes, and retirement. It owns no persistence or hardware interface.
+- Keep Linux filesystem responsibilities in the `std` host adapter: single-writer lock, explicit initialization, append-only event encoding, sequence/integrity/semantic validation, and durable flush ordering. Flush a reservation before exposing a lease; flush a definitive completion before restoring eligibility.
+- An MCU adapter needs a separate persistence boundary above the core: load and validate a complete snapshot, durably reserve before exposing a lease, and durably record completion before applying healthy/refunded state. The concrete storage adapter must define atomicity, flush/barrier meaning, torn-write detection, bounded capacity/compaction, and single-writer ownership. Do not put flash APIs in the portable core.
+- Treat missing state as uninitialized only through explicit provisioning. Reject corrupt, incomplete, incompatible, or unverifiable state without resetting. Unknown outcomes remain charged and quarantined; recovery requires reviewed authoritative evidence and an auditable transition. Do not promise exactly-once execution.
+- Unresolved owner decision: exact MCU/architecture/toolchain and storage technology/part (including endurance, erase geometry, atomic program unit, and durability guarantees). Do not claim target support or select a flash backend until decided.
+
+Checks actually run on Windows:
+
+| Check | Result |
+| --- | --- |
+| `cargo fmt --manifest-path src/layer2_permacore/Cargo.toml --all -- --check` | Passed |
+| `cargo test --locked --manifest-path src/layer2_permacore/Cargo.toml -p permanexus-wear-core` | Passed, 5/5; doc tests 0 |
+| Same core test with `--no-default-features` | Passed, 5/5; doc tests 0 |
+| Host wrapper `cargo check` | Passed after setting `PROTOC` and PATH to the existing isolated dependency prefix |
+| Core `cargo check --no-default-features` | Passed |
+| `git diff --check` | Blocked: Git returned “this operation must be run in a work tree” for diff commands, although `git status` and `rev-parse --show-toplevel` succeed in this environment. |
+
+Initial sandboxed Cargo invocation could not canonicalize the workspace path. The first elevated host check then reported missing `protoc`; setting the existing isolated toolchain path corrected it, and the requested checks passed. No dependencies or system packages were changed. Codex usage observations: opening 11% five-hour / 67% weekly; closing 11% / 67% with unchanged reset timestamps (1793713045 / 1793774136). Other provider metrics and earlier daily usage are unavailable; these observations do not establish full-day consumption or a daily cap event.
