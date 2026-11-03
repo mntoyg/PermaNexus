@@ -1,5 +1,19 @@
 # Daily progress
 
+## 2026-11-03 — Project return review and product direction
+
+Plan and acceptance criteria: re-read the required project records, verify current branch/publication status, distinguish implemented capabilities from roadmap items, and prepare a next plan around a concrete user problem without presenting research or simulation as production capability.
+
+Current state: `main` is clean and tracks `origin/main`. HEAD is `a7d9a58 Record P001 review and publication results`; the preceding implementation commit `93ae1c2 Implement RAM-only ApplyCommand simulator` is also present in the recorded history. P001 and its final review were published normally. Phase 3A Windows verification and `git diff --check` are documented as passed in the 2026-10-27 record. P001 remains in progress because post-commit response loss and induced deadline expiry are unverified.
+
+Implemented today: in-memory atomic register simulation; deterministic synthetic read-only telemetry; per-component RAM-only Micro-State commands; Rust in-memory write-budget planner and append-only journaled simulator. Not implemented: a storage adapter that writes user data, logical-to-physical placement/migration, real sensors, persistent actuator state, authenticated transport, hardware access, or demonstrated hardware endurance. No code or feature status changed in this planning review; no tests were run.
+
+Recommended product hypothesis, not an approved target: a write-budgeted storage layer for edge/embedded devices that persist important small state on finite-endurance flash/NVM. Proposed vertical slice: logical keys over a mock storage backend; choose among modeled slots using persisted write budgets; durably reserve before each write; preserve charges/quarantine when outcome is unknown; test restart, corruption, and interrupted operations; expose an auditable status view. This joins the current standalone planner and journal into an end-to-end simulation without claiming device endurance or touching hardware.
+
+Recommended gates: (1) confirm the initial device/workload and data-loss/endurance requirements; (2) resolve P001's unknown-outcome/deadline verification gap or explicitly retain it as a documented limitation; (3) complete P003 journal durability/integrity/compaction design and P004 evidence-based quarantine reconciliation design for the selected target; (4) implement the P005 mock-backed storage vertical slice with failure/restart tests; only later consider a device-specific hardware design and separately authorized implementation. Do not start P005 implementation before those gates.
+
+Usage: opening Codex metrics showed 67% weekly and 5% five-hour; the closing observation was 67% weekly and 6% five-hour, with reset timestamps unchanged at 1793774136 / 1793713045. These are rounded account-wide observations and cannot establish earlier use today or other providers' usage. No exact daily total or 14-point cap event is inferred.
+
 ## 2026-10-27 — P001 final diff review and publication
 
 Plan/acceptance criteria: diagnose why sandboxed `git diff` commands failed while status and rev-parse worked; review all current P001 tracked and new paths; verify security boundaries and `git diff --check`; then stage only the reviewed paths and publish with a normal commit/push. Do not rerun tests unless review identifies a concrete defect.

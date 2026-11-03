@@ -1,10 +1,24 @@
 # Agent handoff
 
-Last updated: 2026-10-27, Asia/Bangkok.
+Last updated: 2026-11-03, Asia/Bangkok.
 
 ## Context
 
-Current stage (2026-10-27): F011 synthetic read-only telemetry and P001 Phases 1-2 are implemented and independently reviewed. Phase 3A Windows checks and final diff/whitespace review passed. All 16 changed P001 paths were reviewed and published in commit `93ae1c22d02425be8cb49cd99cba75431b205a96` (`Implement RAM-only ApplyCommand simulator`) to `origin/main`; remote SHA was verified and the working tree is clean. The Git diff error reproduces only in the sandboxed command context: explicit `-C`, `--work-tree`, and `safe.directory` do not change it, while scoped elevated read-only Git commands work. Repository metadata reports a non-bare worktree with no `core.worktree` override; no Git configuration or metadata was changed to resolve the sandbox limitation. Deterministic transport loss after commit and induced deadline expiry remain untested; no fault injection was added. Keep the owner-approved RAM-only policy, schema, register/wear-planner independence, and unauthenticated loopback boundary unchanged.
+Current stage (2026-11-03): F011 synthetic read-only telemetry and P001 Phases 1-2 are implemented and independently reviewed. Phase 3A Windows verification, final full-diff/whitespace review, commit, and normal publication to `origin/main` completed on 2026-10-27; see the dated records below and `progress.md`. HEAD is `a7d9a58`; the working tree was clean at the start of this planning review, which now has documentation updates in `progress.md` and `handoff.md`. P001 remains in progress because post-commit response loss and induced deadline expiry are untested; no fault injection was added. Keep the owner-approved RAM-only policy, schema, register/wear-planner independence, and unauthenticated loopback boundary unchanged.
+
+## Recommended product direction (not yet an approved implementation target)
+
+Product hypothesis: PermaNexus can address write hot-spots and conservative recovery for edge/embedded applications that persist important small state on storage with finite write endurance. The central feature would be a write-budgeted storage layer that mediates logical writes, distributes them across modeled slots, persists reservations before writes, and preserves charge/quarantine when a write outcome is unknown. The current planner and journal are standalone simulations; PermaNexus does not yet write or migrate application data. This hypothesis needs an owner-selected device/workload and measurable loss/endurance requirements before it becomes an agreed feature scope.
+
+Proposed bounded sequence:
+
+1. Confirm target workload, storage class, expected write rate, acceptable data loss, restart behavior, and success metrics.
+2. Close or explicitly retain P001's post-commit unknown-outcome and deadline verification gap without production fault injection or automatic retries.
+3. Design P003 journal durability/integrity/compaction and P004 evidence-based quarantine reconciliation for the chosen target.
+4. Implement P005 as a mock-backed logical-key storage vertical slice with persisted write-budget reservations, explicit commit/no-write/unknown outcomes, recovery, and audit/status reporting. Add restart/interruption/corruption tests before considering any hardware backend.
+5. Treat device-backed writes as a separate P009 safety design and require explicit owner authorization before implementation.
+
+Acceptance for the proposed simulation: repeated writes are spread according to configured budgets; reservations are durable before a write is exposed; a restart preserves charges and quarantine; corruption or incomplete state fails closed; unknown outcomes are never silently refunded or retried; tests demonstrate correctness without making endurance or production-readiness claims.
 
 Contributor changes were already present in AGENTS.md, feature.md, progress.md, handoff.md, and proto/README.md. Baseline copies are preserved locally in ignored `build/telemetry-baseline/`; no reset, stash, or overwrite of unrelated work was performed. The owner subsequently requested committing and publishing the completed stage, including the reviewed architecture/budget records.
 
@@ -150,7 +164,7 @@ P001 review/publication-session observations on 2026-10-27: opening Codex metric
 
 ## Next tasks
 
-1. **P001 next step: continue only after review of the published implementation.** The Phase 3A Windows checks and HPP suite passed, and the 16 changed paths passed source/security and whitespace review. Post-commit lost-response and induced-deadline behavior remain unverified; no production fault injection, automatic retries, or exactly-once claims are permitted. Keep the simulator loopback-only and unauthenticated; add no hardware access, register/wear-planner mapping, or schema changes. Follow the 14% daily cap for future work and update this handoff if reached.
+1. **Next planning step: confirm or revise the product hypothesis above.** Do not start P005 implementation until the initial workload and measurable requirements are selected and P003/P004 safety designs are complete. In parallel, decide how to handle the P001 unknown-outcome/deadline verification gap. No hardware/MMIO, external network exposure, automatic write retry, or exactly-once claim is authorized by this plan.
 2. Validate HPP portability and representative latency distributions on intended targets before changing alignment, memory order, or deployment defaults.
 3. Review journal durability on target platforms and design authenticated/monotonic metadata and compaction before hardware integration.
 4. Design evidence-based quarantine reconciliation; do not silently reconstruct quarantined slots as healthy.
